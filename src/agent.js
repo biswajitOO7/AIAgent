@@ -8,9 +8,9 @@ const SYSTEM_PROMPT = `You are a helpful AI assistant. You answer questions and 
 You have access to the following history of our conversation. Use it to provide context-aware responses.
 `;
 
-async function getAgentResponse(userInput) {
+async function getAgentResponse(userId, userInput) {
     try {
-        const history = await getRecentHistory();
+        const history = await getRecentHistory(userId);
 
         let messages = [
             { role: "system", content: SYSTEM_PROMPT }
@@ -37,7 +37,7 @@ async function getAgentResponse(userInput) {
         });
 
         const answer = response.choices[0].message.content;
-        await saveInteraction(userInput, answer);
+        await saveInteraction(userId, userInput, answer);
 
         return answer;
 

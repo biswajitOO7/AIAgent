@@ -1,22 +1,70 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { connectDB, saveInteraction, getRecentHistory } = require('./db');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const { connectDB, saveInteraction, getRecentHistory, registerUser, findUser } = require('./db');
 const { getAgentResponse } = require('./agent');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 7860;
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key'; // Use env var in production
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Auth Middleware
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) return res.sendStatus(401);
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.sendStatus(403);
+        req.user = user;
+        next();
+    });
+}
+
 // Routes
-app.get('/api/history', async (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
     try {
-        const history = await getRecentHistory();
+        const { username, password } = req.body;
+        if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+
+        const userId = await registerUser(username, password);
+        res.status(201).json({ message: 'User registered', userId });
+    } catch (error) {
+        console.error('Registration Error:', error);
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        const user = await findUser(username);
+
+        if (!user) return res.status(400).json({ error: 'User not found' });
+
+        const validPassword = await bcrypt.compare(password, user.password);
+        if (!validPassword) return res.status(400).json({ error: 'Invalid password' });
+
+        const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1h' });
+        res.json({ token, username: user.username });
+    } catch (error) {
+        console.error('Login Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+app.get('/api/history', authenticateToken, async (req, res) => {
+    try {
+        const history = await getRecentHistory(req.user.userId);
         res.json(history);
     } catch (error) {
         console.error('History Error:', error);
@@ -24,12 +72,12 @@ app.get('/api/history', async (req, res) => {
     }
 });
 
-app.post('/api/chat', async (req, res) => {
+app.post('/api/chat', authenticateToken, async (req, res) => {
     try {
         const { message } = req.body;
         if (!message) return res.status(400).json({ error: 'Message is required' });
 
-        const response = await getAgentResponse(message);
+        const response = await getAgentResponse(req.user.userId, message);
         res.json({ response });
     } catch (error) {
         console.error('API Error:', error);

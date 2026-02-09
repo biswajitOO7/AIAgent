@@ -14,9 +14,11 @@
     "@huggingface/inference": "^4.13.11",
     "@langchain/community": "^1.1.12",
     "@langchain/core": "^1.1.19",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^16.4.5",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "langchain": "^1.2.18",
     "mongodb": "^7.1.0"
   }

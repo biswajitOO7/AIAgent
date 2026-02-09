@@ -1,8 +1,10 @@
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
+const bcrypt = require('bcryptjs');
 
 let client;
 let db;
-let collection;
+let usersCollection;
+let chatsCollection;
 
 async function connectDB() {
     if (client) return;
@@ -11,7 +13,8 @@ async function connectDB() {
         client = new MongoClient(process.env.MONGODB_URI);
         await client.connect();
         db = client.db();
-        collection = db.collection('chat_history');
+        usersCollection = db.collection('users');
+        chatsCollection = db.collection('chat_history');
         console.log('Connected to MongoDB');
     } catch (error) {
         console.error('MongoDB connection error:', error);
@@ -19,26 +22,47 @@ async function connectDB() {
     }
 }
 
-async function saveInteraction(userInput, agentResponse) {
-    if (!collection) await connectDB();
-    await collection.insertOne({
+async function registerUser(username, password) {
+    if (!usersCollection) await connectDB();
+    const existingUser = await usersCollection.findOne({ username });
+    if (existingUser) {
+        throw new Error('Username already exists');
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await usersCollection.insertOne({
+        username,
+        password: hashedPassword,
+        createdAt: new Date()
+    });
+    return result.insertedId;
+}
+
+async function findUser(username) {
+    if (!usersCollection) await connectDB();
+    return await usersCollection.findOne({ username });
+}
+
+async function saveInteraction(userId, userInput, agentResponse) {
+    if (!chatsCollection) await connectDB();
+    await chatsCollection.insertOne({
+        userId: new ObjectId(userId), // specific to user
         userInput,
         agentResponse,
         timestamp: new Date()
     });
 }
 
-async function getRecentHistory(limit = 5) {
-    if (!collection) await connectDB();
-    const history = await collection.find()
+async function getRecentHistory(userId, limit = 10) {
+    if (!chatsCollection) await connectDB();
+    const history = await chatsCollection.find({ userId: new ObjectId(userId) })
         .sort({ timestamp: -1 })
         .limit(limit)
         .toArray();
-    
+
     return history.reverse().map(doc => ({
         input: doc.userInput,
         output: doc.agentResponse
     }));
 }
 
-module.exports = { connectDB, saveInteraction, getRecentHistory };
+module.exports = { connectDB, registerUser, findUser, saveInteraction, getRecentHistory };
