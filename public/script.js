@@ -13,16 +13,25 @@ const logoutBtn = document.getElementById('logout-btn');
 const chatInterface = document.getElementById('chat-interface');
 const sidebar = document.getElementById('sidebar');
 const contactsList = document.getElementById('contacts-list');
+const groupsList = document.getElementById('groups-list');
 const currentChatName = document.getElementById('current-chat-name');
 const mobileMenuBtn = document.getElementById('mobile-menu-btn');
 const currentUserAvatar = document.getElementById('current-user-avatar');
 const currentUsernameDisplay = document.getElementById('current-username');
 
+// Group Modal Elements
+const createGroupBtn = document.getElementById('create-group-btn');
+const groupModal = document.getElementById('group-modal');
+const createGroupForm = document.getElementById('create-group-form');
+const cancelGroupBtn = document.getElementById('cancel-group-btn');
+const userChecklist = document.getElementById('user-checklist');
+
 let isLoginMode = true;
 let authToken = localStorage.getItem('authToken');
 let currentUsername = localStorage.getItem('username');
 let currentUserId = localStorage.getItem('userId');
-let activeContactId = 'ai-agent'; // 'ai-agent' or userId
+let activeContactId = 'ai-agent'; // 'ai-agent', userId, or groupId
+let activeType = 'ai'; // 'ai', 'user', 'group'
 let pollingInterval;
 
 // --- Auth Functions ---
@@ -55,7 +64,8 @@ function checkAuth() {
         }
 
         loadContacts();
-        loadChat(activeContactId);
+        loadGroups();
+        loadChat(activeContactId, activeType);
         startPolling();
     } else {
         authModal.classList.remove('hidden');
@@ -75,7 +85,7 @@ function logout() {
     checkAuth();
 }
 
-// --- Contact & Chat Functions ---
+// --- Contact & Group Functions ---
 
 async function loadContacts() {
     try {
@@ -93,7 +103,7 @@ async function loadContacts() {
             const div = document.createElement('div');
             div.className = `contact-item ${activeContactId === user._id ? 'active' : ''}`;
             div.dataset.id = user._id;
-            div.dataset.name = user.username;
+            div.dataset.type = 'user';
             div.innerHTML = `
                 <div class="avatar">${user.username.charAt(0).toUpperCase()}</div>
                 <div class="contact-info">
@@ -101,39 +111,74 @@ async function loadContacts() {
                     <span class="contact-status">User</span>
                 </div>
             `;
-            div.addEventListener('click', () => switchContact(user._id, user.username));
+            div.addEventListener('click', () => switchChat(user._id, user.username, 'user'));
             contactsList.appendChild(div);
         });
 
         // Re-attach AI Agent listener
-        aiAgent.onclick = () => switchContact('ai-agent', 'AI Assistant');
+        aiAgent.onclick = () => switchChat('ai-agent', 'AI Assistant', 'ai');
 
     } catch (error) {
         console.error('Failed to load contacts:', error);
     }
 }
 
-function switchContact(contactId, contactName) {
-    activeContactId = contactId;
-    currentChatName.textContent = contactName;
+async function loadGroups() {
+    try {
+        const res = await fetch('/api/groups', {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const groups = await res.json();
+
+        groupsList.innerHTML = '';
+
+        groups.forEach(group => {
+            const div = document.createElement('div');
+            div.className = `contact-item ${activeContactId === group._id ? 'active' : ''}`;
+            div.dataset.id = group._id;
+            div.dataset.type = 'group';
+            div.innerHTML = `
+                <div class="avatar group-avatar">${group.name.charAt(0).toUpperCase()}</div>
+                <div class="contact-info">
+                    <span class="contact-name">${group.name}</span>
+                    <span class="contact-status">${group.members.length} members</span>
+                </div>
+            `;
+            div.addEventListener('click', () => switchChat(group._id, group.name, 'group'));
+            groupsList.appendChild(div);
+        });
+    } catch (error) {
+        console.error('Failed to load groups:', error);
+    }
+}
+
+function switchChat(id, name, type) {
+    activeContactId = id;
+    activeType = type;
+    currentChatName.textContent = name;
 
     // Update active class
     document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active'));
-    document.querySelector(`[data-id="${contactId}"]`)?.classList.add('active');
+
+    // Find based on ID and update active state
+    const selector = type === 'ai' ? '[data-id="ai-agent"]' : `[data-id="${id}"]`;
+    document.querySelector(selector)?.classList.add('active');
 
     // Close mobile sidebar
     sidebar.classList.remove('open');
 
-    loadChat(contactId);
+    loadChat(id, type);
 }
 
-async function loadChat(contactId) {
+async function loadChat(id, type) {
     chatHistory.innerHTML = '';
 
-    if (contactId === 'ai-agent') {
+    if (type === 'ai') {
         loadAiHistory();
-    } else {
-        loadUserHistory(contactId);
+    } else if (type === 'user') {
+        loadUserHistory(id);
+    } else if (type === 'group') {
+        loadGroupHistory(id);
     }
 }
 
@@ -170,7 +215,7 @@ async function loadUserHistory(otherUserId) {
         } else {
             messages.forEach(msg => {
                 const isMe = msg.senderId === currentUserId;
-                appendMessage(msg.content, isMe ? 'user' : 'ai'); // Reusing 'ai' class for 'other user' style
+                appendMessage(msg.content, isMe ? 'user' : 'ai');
             });
             scrollToBottom();
         }
@@ -179,11 +224,41 @@ async function loadUserHistory(otherUserId) {
     }
 }
 
-function appendMessage(text, type) {
+async function loadGroupHistory(groupId) {
+    try {
+        const res = await fetch(`/api/groups/${groupId}/messages`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const messages = await res.json();
+
+        if (messages.length === 0) {
+            chatHistory.innerHTML = '<div class="welcome-message"><p>Welcome to the group! 👋</p></div>';
+        } else {
+            messages.forEach(msg => {
+                const isMe = msg.senderId === currentUserId;
+                appendMessage(msg.content, isMe ? 'user' : 'ai', isMe ? null : msg.senderName);
+            });
+            scrollToBottom();
+        }
+    } catch (error) {
+        console.error('Failed to load group messages:', error);
+    }
+}
+
+function appendMessage(text, type, senderName = null) {
     const msgDiv = document.createElement('div');
-    // type: 'user' (me) or 'ai' (other/bot)
     msgDiv.className = `message ${type}`;
-    msgDiv.textContent = text;
+
+    if (senderName) {
+        const senderSpan = document.createElement('span');
+        senderSpan.className = 'message-sender';
+        senderSpan.textContent = senderName;
+        msgDiv.appendChild(senderSpan);
+    }
+
+    const textNode = document.createTextNode(text);
+    msgDiv.appendChild(textNode);
+
     chatHistory.appendChild(msgDiv);
     scrollToBottom();
 }
@@ -201,40 +276,112 @@ function scrollToBottom() {
     chatHistory.scrollTop = chatHistory.scrollHeight;
 }
 
+// --- Group Creation ---
+
+async function openCreateGroupModal() {
+    try {
+        const res = await fetch('/api/users', {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const users = await res.json();
+
+        userChecklist.innerHTML = '';
+        users.forEach(user => {
+            const div = document.createElement('div');
+            div.className = 'checklist-item';
+            div.innerHTML = `
+                <input type="checkbox" id="user-${user._id}" value="${user._id}">
+                <label for="user-${user._id}">${user.username}</label>
+            `;
+            userChecklist.appendChild(div);
+        });
+
+        groupModal.classList.remove('hidden');
+    } catch (error) {
+        console.error('Failed to load users for group creation:', error);
+    }
+}
+
+createGroupForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('group-name').value;
+    const checkboxes = userChecklist.querySelectorAll('input[type="checkbox"]:checked');
+    const memberIds = Array.from(checkboxes).map(cb => cb.value);
+
+    if (memberIds.length === 0) {
+        alert('Please select at least one member');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/groups', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ name, members: memberIds })
+        });
+
+        if (res.ok) {
+            groupModal.classList.add('hidden');
+            loadGroups();
+            document.getElementById('group-name').value = '';
+        } else {
+            alert('Failed to create group');
+        }
+    } catch (error) {
+        console.error('Error creating group:', error);
+    }
+});
+
 // --- Polling ---
 
 function startPolling() {
     if (pollingInterval) clearInterval(pollingInterval);
     pollingInterval = setInterval(() => {
-        if (!document.hidden && activeContactId !== 'ai-agent') {
-            refreshUserChat();
+        if (!document.hidden) {
+            refreshChat();
+            // Also refresh lists occasionally? For now just chat.
+            // But if we want to see new groups, we should poll groups too.
+            // Let's do it less frequently or just separate? 
+            // For simplicity, let's just refresh current chat.
         }
-    }, 3000); // Poll every 3 seconds
+    }, 3000);
 }
 
 function stopPolling() {
     if (pollingInterval) clearInterval(pollingInterval);
 }
 
-async function refreshUserChat() {
-    // Determine last timestamp to only fetch new? For simplicity, we just reload for now
-    // A better approach would be to check counts or last ID. 
-    // Given the constraints, re-fetching visible history is safe enough for small chats.
-    // To avoid flicker, we could compare. But let's keep it simple first.
+async function refreshChat() {
+    if (activeType === 'ai') return;
 
     try {
-        const res = await fetch(`/api/messages/${activeContactId}`, {
+        let endpoint = '';
+        if (activeType === 'user') endpoint = `/api/messages/${activeContactId}`;
+        if (activeType === 'group') endpoint = `/api/groups/${activeContactId}/messages`;
+
+        const res = await fetch(endpoint, {
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
         const messages = await res.json();
 
-        // Simple diff: if count changed, reload. (Not perfect but works for simple case)
         const currentCount = chatHistory.querySelectorAll('.message').length;
         if (messages.length !== currentCount) {
             chatHistory.innerHTML = '';
             messages.forEach(msg => {
                 const isMe = msg.senderId === currentUserId;
-                appendMessage(msg.content, isMe ? 'user' : 'ai');
+                // For group, we need senderName. For user, we don't really.
+                // But loadGroupHistory handles it. Let's just re-call load logic?
+                // Re-calling load logic is easier but flickery. 
+                // Let's duplicate the render logic slightly to be safe.
+
+                if (activeType === 'group') {
+                    appendMessage(msg.content, isMe ? 'user' : 'ai', isMe ? null : msg.senderName);
+                } else {
+                    appendMessage(msg.content, isMe ? 'user' : 'ai');
+                }
             });
             scrollToBottom();
         }
@@ -254,6 +401,12 @@ logoutBtn.addEventListener('click', logout);
 
 mobileMenuBtn.addEventListener('click', () => {
     sidebar.classList.toggle('open');
+});
+
+createGroupBtn.addEventListener('click', openCreateGroupModal);
+
+cancelGroupBtn.addEventListener('click', () => {
+    groupModal.classList.add('hidden');
 });
 
 authForm.addEventListener('submit', async (e) => {
@@ -281,7 +434,7 @@ authForm.addEventListener('submit', async (e) => {
         if (isLoginMode) {
             authToken = data.token;
             currentUsername = data.username;
-            currentUserId = data.userId; // Assuming backend sends this
+            currentUserId = data.userId;
 
             localStorage.setItem('authToken', authToken);
             localStorage.setItem('username', currentUsername);
@@ -309,17 +462,18 @@ chatForm.addEventListener('submit', async (e) => {
     appendMessage(message, 'user');
     userInput.value = '';
 
-    if (activeContactId === 'ai-agent') {
+    if (activeType === 'ai') {
         await sendToAi(message);
-    } else {
+    } else if (activeType === 'user') {
         await sendToUser(activeContactId, message);
+    } else if (activeType === 'group') {
+        await sendToGroup(activeContactId, message);
     }
 });
 
 async function sendToAi(message) {
     sendBtn.disabled = true;
 
-    // Typing indicator simulation
     const typingDiv = document.createElement('div');
     typingDiv.className = 'typing-indicator';
     typingDiv.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
@@ -363,9 +517,24 @@ async function sendToUser(recipientId, content) {
             },
             body: JSON.stringify({ recipientId, content })
         });
-        // Message is already appended optimistically
     } catch (error) {
         console.error('Failed to send message:', error);
+        appendMessage("Failed to send message.", 'ai');
+    }
+}
+
+async function sendToGroup(groupId, content) {
+    try {
+        await fetch(`/api/groups/${groupId}/messages`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ content })
+        });
+    } catch (error) {
+        console.error('Failed to send group message:', error);
         appendMessage("Failed to send message.", 'ai');
     }
 }

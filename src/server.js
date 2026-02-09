@@ -11,7 +11,11 @@ const {
     findUser,
     getAllUsers,
     saveDirectMessage,
-    getDirectMessages
+    getDirectMessages,
+    createGroup,
+    getUserGroups,
+    saveGroupMessage,
+    getGroupMessages
 } = require('./db');
 const { getAgentResponse } = require('./agent');
 require('dotenv').config();
@@ -130,6 +134,59 @@ app.post('/api/messages/send', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Failed to send message' });
     }
 });
+
+// Group Chat Routes
+app.post('/api/groups', authenticateToken, async (req, res) => {
+    try {
+        const { name, members } = req.body;
+        if (!name || !members || !Array.isArray(members)) {
+            return res.status(400).json({ error: 'Valid name and members array required' });
+        }
+
+        // Members should include creator (added in db function)
+        const groupId = await createGroup(name, req.user.userId, members);
+        res.status(201).json({ groupId, name });
+    } catch (error) {
+        console.error('Create Group Error:', error);
+        res.status(500).json({ error: 'Failed to create group' });
+    }
+});
+
+app.get('/api/groups', authenticateToken, async (req, res) => {
+    try {
+        const groups = await getUserGroups(req.user.userId);
+        res.json(groups);
+    } catch (error) {
+        console.error('Get Groups Error:', error);
+        res.status(500).json([]);
+    }
+});
+
+app.get('/api/groups/:groupId/messages', authenticateToken, async (req, res) => {
+    try {
+        const { groupId } = req.params;
+        const messages = await getGroupMessages(groupId);
+        res.json(messages);
+    } catch (error) {
+        console.error('Get Group Messages Error:', error);
+        res.status(500).json([]);
+    }
+});
+
+app.post('/api/groups/:groupId/messages', authenticateToken, async (req, res) => {
+    try {
+        const { groupId } = req.params;
+        const { content } = req.body;
+        if (!content) return res.status(400).json({ error: 'Content required' });
+
+        await saveGroupMessage(groupId, req.user.userId, content);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Send Group Message Error:', error);
+        res.status(500).json({ error: 'Failed to send message' });
+    }
+});
+
 
 // Start Server
 async function startServer() {
