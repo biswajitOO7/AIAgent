@@ -13,8 +13,8 @@ async function loadHistory() {
         if (history.length > 0) {
             chatHistory.innerHTML = '';
             history.forEach(msg => {
-                appendMessage(msg.userInput, 'user');
-                appendMessage(msg.agentResponse, 'ai');
+                appendMessage(msg.input, 'user');
+                appendMessage(msg.output, 'ai');
             });
             scrollToBottom();
         }
