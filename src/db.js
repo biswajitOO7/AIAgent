@@ -6,6 +6,8 @@ let db;
 let usersCollection;
 let chatsCollection;
 let messagesCollection;
+let groupsCollection;
+let groupMessagesCollection;
 
 async function connectDB() {
     if (client) return;
@@ -17,6 +19,8 @@ async function connectDB() {
         usersCollection = db.collection('users');
         chatsCollection = db.collection('chat_history');
         messagesCollection = db.collection('direct_messages');
+        groupsCollection = db.collection('groups');
+        groupMessagesCollection = db.collection('group_messages');
         console.log('Connected to MongoDB');
     } catch (error) {
         console.error('MongoDB connection error:', error);
@@ -96,7 +100,60 @@ async function getDirectMessages(userId1, userId2, limit = 50) {
 
     return msgs.reverse().map(msg => ({
         content: msg.content,
-        senderId: msg.senderId,
+        senderId: msg.senderId.toString(),
+        timestamp: msg.timestamp
+    }));
+}
+
+// Group Chat Functions
+
+async function createGroup(name, creatorId, memberIds) {
+    if (!groupsCollection) await connectDB();
+
+    const members = [...new Set([creatorId, ...memberIds])].map(id => new ObjectId(id));
+
+    const result = await groupsCollection.insertOne({
+        name,
+        creatorId: new ObjectId(creatorId),
+        members,
+        createdAt: new Date()
+    });
+    return result.insertedId;
+}
+
+async function getUserGroups(userId) {
+    if (!groupsCollection) await connectDB();
+    return await groupsCollection.find({ members: new ObjectId(userId) }).toArray();
+}
+
+async function saveGroupMessage(groupId, senderId, content) {
+    if (!groupMessagesCollection) await connectDB();
+
+    // Get sender name for display optimization (optional, but good for simple apps)
+    // For now, we'll just store IDs and fetch sender info or rely on frontend to map IDs to names if it has user list
+    // OR we can store username in message. Let's store username to save lookups.
+    const user = await usersCollection.findOne({ _id: new ObjectId(senderId) });
+
+    await groupMessagesCollection.insertOne({
+        groupId: new ObjectId(groupId),
+        senderId: new ObjectId(senderId),
+        senderName: user ? user.username : 'Unknown',
+        content,
+        timestamp: new Date()
+    });
+}
+
+async function getGroupMessages(groupId, limit = 50) {
+    if (!groupMessagesCollection) await connectDB();
+    const msgs = await groupMessagesCollection.find({ groupId: new ObjectId(groupId) })
+        .sort({ timestamp: -1 })
+        .limit(limit)
+        .toArray();
+
+    return msgs.reverse().map(msg => ({
+        content: msg.content,
+        senderId: msg.senderId.toString(),
+        senderName: msg.senderName,
         timestamp: msg.timestamp
     }));
 }
@@ -109,5 +166,9 @@ module.exports = {
     saveInteraction,
     getRecentHistory,
     saveDirectMessage,
-    getDirectMessages
+    getDirectMessages,
+    createGroup,
+    getUserGroups,
+    saveGroupMessage,
+    getGroupMessages
 };

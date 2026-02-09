@@ -34,6 +34,9 @@
                 </button>
             </div>
 
+            <div class="sidebar-section-header">
+                <span>Contacts</span>
+            </div>
             <div class="contacts-list" id="contacts-list">
                 <!-- AI Agent (Default) -->
                 <div class="contact-item active" data-id="ai-agent">
@@ -44,6 +47,14 @@
                     </div>
                 </div>
                 <!-- Other users will be loaded here -->
+            </div>
+
+            <div class="sidebar-section-header">
+                <span>Groups</span>
+                <button id="create-group-btn" title="Create Group">+</button>
+            </div>
+            <div class="contacts-list" id="groups-list">
+                <!-- Groups will be loaded here -->
             </div>
         </aside>
 
@@ -108,6 +119,30 @@
                 </form>
             </div>
         </div>
+
+        <!-- Create Group Modal -->
+        <div id="group-modal" class="auth-modal hidden">
+            <div class="auth-box">
+                <h2>Create New Group</h2>
+                <form id="create-group-form">
+                    <div class="form-group">
+                        <label for="group-name">Group Name</label>
+                        <input type="text" id="group-name" required placeholder="e.g., Team Alpha">
+                    </div>
+                    <div class="form-group">
+                        <label>Select Members</label>
+                        <div id="user-checklist" class="user-checklist">
+                            <!-- User checkboxes will be populated here -->
+                        </div>
+                    </div>
+                    <div class="modal-buttons">
+                        <button type="button" id="cancel-group-btn" class="secondary-btn">Cancel</button>
+                        <button type="submit" id="submit-group-btn" class="primary-btn">Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
     </div>
     <script src="script.js"></script>
 </body>
