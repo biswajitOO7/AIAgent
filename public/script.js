@@ -53,7 +53,17 @@ function toggleAuthMode() {
 }
 
 function checkAuth() {
+    authToken = localStorage.getItem('authToken');
+    currentUsername = localStorage.getItem('username');
+    currentUserId = localStorage.getItem('userId');
+
     if (authToken) {
+        if (!currentUserId) {
+            // Force re-login if userId is missing (legacy session)
+            logout();
+            return;
+        }
+
         authModal.classList.add('hidden');
         chatInterface.classList.remove('hidden');
         sidebar.classList.remove('hidden');
