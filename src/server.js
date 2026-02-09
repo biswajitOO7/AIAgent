@@ -3,13 +3,22 @@ const cors = require('cors');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { connectDB, saveInteraction, getRecentHistory, registerUser, findUser } = require('./db');
+const {
+    connectDB,
+    saveInteraction,
+    getRecentHistory,
+    registerUser,
+    findUser,
+    getAllUsers,
+    saveDirectMessage,
+    getDirectMessages
+} = require('./db');
 const { getAgentResponse } = require('./agent');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 7860;
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key'; // Use env var in production
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
 
 // Middleware
 app.use(cors());
@@ -54,11 +63,23 @@ app.post('/api/auth/login', async (req, res) => {
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) return res.status(400).json({ error: 'Invalid password' });
 
-        const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1h' });
-        res.json({ token, username: user.username });
+        const token = jwt.sign({ userId: user._id, username: user.username }, JWT_SECRET, { expiresIn: '1h' });
+        res.json({ token, username: user.username, userId: user._id });
     } catch (error) {
         console.error('Login Error:', error);
         res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+app.get('/api/users', authenticateToken, async (req, res) => {
+    try {
+        const users = await getAllUsers();
+        // Filter out current user from the list
+        const otherUsers = users.filter(u => u._id.toString() !== req.user.userId);
+        res.json(otherUsers);
+    } catch (error) {
+        console.error('Get Users Error:', error);
+        res.status(500).json([]);
     }
 });
 
@@ -82,6 +103,31 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('API Error:', error);
         res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+// Direct Messaging Routes
+app.get('/api/messages/:otherUserId', authenticateToken, async (req, res) => {
+    try {
+        const { otherUserId } = req.params;
+        const messages = await getDirectMessages(req.user.userId, otherUserId);
+        res.json(messages);
+    } catch (error) {
+        console.error('Get Messages Error:', error);
+        res.status(500).json([]);
+    }
+});
+
+app.post('/api/messages/send', authenticateToken, async (req, res) => {
+    try {
+        const { recipientId, content } = req.body;
+        if (!recipientId || !content) return res.status(400).json({ error: 'Recipient and content required' });
+
+        await saveDirectMessage(req.user.userId, recipientId, content);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Send Message Error:', error);
+        res.status(500).json({ error: 'Failed to send message' });
     }
 });
 

@@ -5,6 +5,7 @@ let client;
 let db;
 let usersCollection;
 let chatsCollection;
+let messagesCollection;
 
 async function connectDB() {
     if (client) return;
@@ -15,6 +16,7 @@ async function connectDB() {
         db = client.db();
         usersCollection = db.collection('users');
         chatsCollection = db.collection('chat_history');
+        messagesCollection = db.collection('direct_messages');
         console.log('Connected to MongoDB');
     } catch (error) {
         console.error('MongoDB connection error:', error);
@@ -42,10 +44,15 @@ async function findUser(username) {
     return await usersCollection.findOne({ username });
 }
 
+async function getAllUsers() {
+    if (!usersCollection) await connectDB();
+    return await usersCollection.find({}, { projection: { password: 0 } }).toArray();
+}
+
 async function saveInteraction(userId, userInput, agentResponse) {
     if (!chatsCollection) await connectDB();
     await chatsCollection.insertOne({
-        userId: new ObjectId(userId), // specific to user
+        userId: new ObjectId(userId),
         userInput,
         agentResponse,
         timestamp: new Date()
@@ -65,4 +72,42 @@ async function getRecentHistory(userId, limit = 10) {
     }));
 }
 
-module.exports = { connectDB, registerUser, findUser, saveInteraction, getRecentHistory };
+async function saveDirectMessage(senderId, recipientId, content) {
+    if (!messagesCollection) await connectDB();
+    await messagesCollection.insertOne({
+        senderId: new ObjectId(senderId),
+        recipientId: new ObjectId(recipientId),
+        content,
+        timestamp: new Date()
+    });
+}
+
+async function getDirectMessages(userId1, userId2, limit = 50) {
+    if (!messagesCollection) await connectDB();
+    const msgs = await messagesCollection.find({
+        $or: [
+            { senderId: new ObjectId(userId1), recipientId: new ObjectId(userId2) },
+            { senderId: new ObjectId(userId2), recipientId: new ObjectId(userId1) }
+        ]
+    })
+        .sort({ timestamp: -1 })
+        .limit(limit)
+        .toArray();
+
+    return msgs.reverse().map(msg => ({
+        content: msg.content,
+        senderId: msg.senderId,
+        timestamp: msg.timestamp
+    }));
+}
+
+module.exports = {
+    connectDB,
+    registerUser,
+    findUser,
+    getAllUsers,
+    saveInteraction,
+    getRecentHistory,
+    saveDirectMessage,
+    getDirectMessages
+};
