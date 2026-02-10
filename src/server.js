@@ -71,6 +71,34 @@ if (process.env.SMTP_HOST) {
     });
 }
 
+// Connectivity Check (Raw TCP)
+const net = require('net');
+const checkSMTPConnection = () => {
+    const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+    const port = process.env.SMTP_PORT || 465;
+    console.log(`[Connectivity Check] Attempting raw TCP connection to ${host}:${port}...`);
+
+    const socket = new net.Socket();
+    socket.setTimeout(5000); // 5s timeout
+
+    socket.on('connect', () => {
+        console.log(`[Connectivity Check] ✅ SUCCESS: Connected to ${host}:${port}`);
+        socket.destroy();
+    });
+
+    socket.on('timeout', () => {
+        console.error(`[Connectivity Check] ❌ TIMEOUT: Could not connect to ${host}:${port} within 5s`);
+        socket.destroy();
+    });
+
+    socket.on('error', (err) => {
+        console.error(`[Connectivity Check] ❌ ERROR: ${err.message}`);
+    });
+
+    socket.connect(port, host);
+};
+checkSMTPConnection();
+
 // Middleware
 app.use(cors());
 app.use(express.json());
