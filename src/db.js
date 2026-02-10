@@ -198,9 +198,24 @@ async function getRecentHistory(userId, limit = 10) {
 
 // ... (Updating other functions similarly to be safe would be good, but let's focus on history first to be surgical)
 
+// Debug helper
+async function getDebugStats() {
+    if (!usersCollection) await connectDB();
+    const userCount = await usersCollection.countDocuments();
+    const chatCount = await chatsCollection.countDocuments();
+    const sampleChat = await chatsCollection.findOne({});
+
+    return {
+        userCount,
+        chatCount,
+        sampleChat
+    };
+}
+
 module.exports = {
     connectDB,
-    getConnectionError, // Export this!
+    getConnectionError,
+    getDebugStats, // Export
     registerUser,
     findUser,
     getAllUsers,

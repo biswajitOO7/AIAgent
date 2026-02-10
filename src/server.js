@@ -16,7 +16,8 @@ const {
     getUserGroups,
     saveGroupMessage,
     getGroupMessages,
-    getConnectionError // Import
+    getConnectionError,
+    getDebugStats // Import
 } = require('./db');
 const { getAgentResponse } = require('./agent');
 require('dotenv').config();
@@ -55,6 +56,16 @@ app.get('/api/health', async (req, res) => {
         res.json({ status: 'ok', message: 'Database connected' });
     } catch (e) {
         res.status(500).json({ status: 'error', error: e.message });
+    }
+});
+
+// Deep Debug Route
+app.get('/api/debug/db', async (req, res) => {
+    try {
+        const stats = await getDebugStats();
+        res.json(stats);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 
