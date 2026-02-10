@@ -23,26 +23,28 @@ body {
     color: var(--text-color);
     font-family: var(--font-family);
     height: 100vh;
+    width: 100vw;
     display: flex;
     justify-content: center;
     align-items: center;
     overflow: hidden;
+    margin: 0;
+    padding: 0;
 }
 
 .app-container {
     width: 100%;
-    max-width: 1400px;
-    /* Wider for 3 columns */
-    height: 95vh;
+    height: 100%;
+    max-width: none;
     background: var(--chat-bg);
-    border-radius: 20px;
-    border: 1px solid var(--border-color);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
     display: grid;
     grid-template-columns: 280px 1fr 300px;
     /* Sidebar, Chat, Notes */
     overflow: hidden;
-    margin: 20px;
+    margin: 0;
 }
 
 /* Sidebar */
