@@ -44,6 +44,11 @@ const transporter = nodemailer.createTransport({
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
     },
+    tls: {
+        // do not fail on invalid certs
+        rejectUnauthorized: false
+    },
+    family: 4, // Force IPv4
     debug: true, // show debug output
     logger: true // log information in console
 });
