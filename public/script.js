@@ -78,7 +78,14 @@ function checkAuth() {
         loadGroups();
         loadChat(activeContactId, activeType);
         startPolling();
-        requestNotificationPermission();
+        loadGroups();
+        loadChat(activeContactId, activeType);
+        startPolling();
+        // Don't auto-request here, browsers might block it. 
+        // We rely on the user clicking "Login" or the Bell icon.
+        if (Notification.permission === 'granted') {
+            console.log("Notifications already granted");
+        }
     } else {
         authModal.classList.remove('hidden');
         chatInterface.classList.add('hidden');
@@ -499,6 +506,11 @@ authForm.addEventListener('submit', async (e) => {
             localStorage.setItem('authToken', authToken);
             localStorage.setItem('username', currentUsername);
             localStorage.setItem('userId', currentUserId);
+
+            localStorage.setItem('userId', currentUserId);
+
+            // Request permission explicitly on user interaction (Login click)
+            Notification.requestPermission();
 
             checkAuth();
         } else {
