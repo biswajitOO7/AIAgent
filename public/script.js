@@ -659,7 +659,13 @@ async function deleteNote(noteId, event) {
 
 // --- Notes Event Listeners ---
 
+const addNoteBtn = document.getElementById('add-note-btn');
+
+console.log("Notes Script Loaded. Add Note Button:", addNoteBtn);
+
 addNoteBtn.addEventListener('click', () => {
+    console.log("Add Note Clicked");
+    alert("Opening Note Modal..."); // Debug Alert
     noteModal.classList.remove('hidden');
 });
 
