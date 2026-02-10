@@ -17,7 +17,8 @@ const {
     saveGroupMessage,
     getGroupMessages,
     getConnectionError,
-    getDebugStats // Import
+    getDebugStats,
+    claimOrphanedChats // Import
 } = require('./db');
 const { getAgentResponse } = require('./agent');
 require('dotenv').config();
@@ -64,6 +65,16 @@ app.get('/api/debug/db', async (req, res) => {
     try {
         const stats = await getDebugStats();
         res.json(stats);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Repair Route
+app.post('/api/debug/claim_history', authenticateToken, async (req, res) => {
+    try {
+        const count = await claimOrphanedChats(req.user.userId);
+        res.json({ message: `Successfully claimed ${count} orphaned chat messages.` });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

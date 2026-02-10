@@ -212,10 +212,21 @@ async function getDebugStats() {
     };
 }
 
+// Repair helper
+async function claimOrphanedChats(userId) {
+    if (!chatsCollection) await connectDB();
+    const result = await chatsCollection.updateMany(
+        { userId: { $exists: false } }, // Find chats without userId
+        { $set: { userId: new ObjectId(userId) } } // Assign to this user
+    );
+    return result.modifiedCount;
+}
+
 module.exports = {
     connectDB,
     getConnectionError,
-    getDebugStats, // Export
+    getDebugStats,
+    claimOrphanedChats, // Export
     registerUser,
     findUser,
     getAllUsers,
