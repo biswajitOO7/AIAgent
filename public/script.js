@@ -574,6 +574,7 @@ const addNoteBtn = document.getElementById('add-note-btn');
 const noteModal = document.getElementById('note-modal');
 const noteModalTitle = document.getElementById('note-modal-title');
 const createNoteForm = document.getElementById('create-note-form');
+const noteTitleInput = document.getElementById('note-title');
 const noteContentInput = document.getElementById('note-content');
 const noteIdInput = document.getElementById('note-id');
 const cancelNoteBtn = document.getElementById('cancel-note-btn');
@@ -593,12 +594,12 @@ async function loadNotes() {
             div.dataset.id = note.id;
 
             // Truncate long content for preview
-            const preview = note.content.length > 30 ? note.content.substring(0, 30) + '...' : note.content;
+            const preview = note.content.length > 40 ? note.content.substring(0, 40) + '...' : note.content;
 
             div.innerHTML = `
                 <div class="contact-info note-info">
-                    <span class="contact-name">${preview}</span>
-                    <span class="contact-status">${new Date(note.timestamp).toLocaleDateString()}</span>
+                    <span class="contact-name">${note.title || 'Untitled Note'}</span>
+                    <span class="contact-status" style="font-size: 0.75rem; opacity: 0.7;">${preview}</span>
                 </div>
                 <button class="delete-note-btn" onclick="deleteNote('${note.id}', event)">×</button>
             `;
@@ -620,18 +621,26 @@ function openNoteModal(note = null) {
         // Edit Mode
         noteModalTitle.textContent = "Edit Note";
         noteIdInput.value = note.id;
+        noteTitleInput.value = note.title || "";
         noteContentInput.value = note.content;
     } else {
         // Create Mode
         noteModalTitle.textContent = "Create New Note";
         noteIdInput.value = "";
+        noteTitleInput.value = "";
         noteContentInput.value = "";
     }
     noteModal.classList.remove('hidden');
-    noteContentInput.focus();
+    // Focus title if empty, otherwise content
+    if (!noteTitleInput.value) {
+        noteTitleInput.focus();
+    } else {
+        noteContentInput.focus();
+    }
 }
 
 async function saveNoteHandler() {
+    const title = noteTitleInput.value.trim();
     const content = noteContentInput.value.trim();
     const noteId = noteIdInput.value;
 
@@ -640,6 +649,7 @@ async function saveNoteHandler() {
     try {
         let url = '/api/notes';
         let method = 'POST';
+        let body = { title, content };
 
         if (noteId) {
             url = `/api/notes/${noteId}`;
@@ -652,7 +662,7 @@ async function saveNoteHandler() {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
             },
-            body: JSON.stringify({ content })
+            body: JSON.stringify(body)
         });
 
         if (res.ok) {
