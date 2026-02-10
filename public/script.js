@@ -83,11 +83,10 @@ function checkAuth() {
 
         loadContacts();
         loadGroups();
+        loadNotes(); // Added here directly
         loadChat(activeContactId, activeType);
         startPolling();
-        loadGroups();
-        loadChat(activeContactId, activeType);
-        startPolling();
+
         // Don't auto-request here, browsers might block it. 
         // We rely on the user clicking "Login" or the Bell icon.
         if (Notification.permission === 'granted') {
@@ -188,31 +187,42 @@ async function loadContacts() {
         const res = await fetch('/api/users', {
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
+
+        if (res.status === 401 || res.status === 403) {
+            return; // checkAuth/logout will handle this
+        }
+
+        if (!res.ok) throw new Error(`API Error: ${res.status}`);
+
         const users = await res.json();
 
         // Clear existing users (keep AI Agent)
         const aiAgent = contactsList.querySelector('[data-id="ai-agent"]');
         contactsList.innerHTML = '';
-        contactsList.appendChild(aiAgent);
+        if (aiAgent) contactsList.appendChild(aiAgent);
 
-        users.forEach(user => {
-            const div = document.createElement('div');
-            div.className = `contact-item ${activeContactId === user._id ? 'active' : ''}`;
-            div.dataset.id = user._id;
-            div.dataset.type = 'user';
-            div.innerHTML = `
+        if (Array.isArray(users)) {
+            users.forEach(user => {
+                const div = document.createElement('div');
+                div.className = `contact-item ${activeContactId === user._id ? 'active' : ''}`;
+                div.dataset.id = user._id;
+                div.dataset.type = 'user';
+                div.innerHTML = `
                 <div class="avatar">${user.username.charAt(0).toUpperCase()}</div>
                 <div class="contact-info">
                     <span class="contact-name">${user.username}</span>
                     <span class="contact-status">User</span>
                 </div>
             `;
-            div.addEventListener('click', () => switchChat(user._id, user.username, 'user'));
-            contactsList.appendChild(div);
-        });
+                div.addEventListener('click', () => switchChat(user._id, user.username, 'user'));
+                contactsList.appendChild(div);
+            });
+        }
 
-        // Re-attach AI Agent listener
-        aiAgent.onclick = () => switchChat('ai-agent', 'AI Assistant', 'ai');
+        // Re-attach AI Agent listener if it exists
+        if (aiAgent) {
+            aiAgent.onclick = () => switchChat('ai-agent', 'AI Assistant', 'ai');
+        }
 
     } catch (error) {
         console.error('Failed to load contacts:', error);
@@ -224,25 +234,31 @@ async function loadGroups() {
         const res = await fetch('/api/groups', {
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
+
+        if (res.status === 401 || res.status === 403) return;
+        if (!res.ok) throw new Error(`API Error: ${res.status}`);
+
         const groups = await res.json();
 
         groupsList.innerHTML = '';
 
-        groups.forEach(group => {
-            const div = document.createElement('div');
-            div.className = `contact-item ${activeContactId === group._id ? 'active' : ''}`;
-            div.dataset.id = group._id;
-            div.dataset.type = 'group';
-            div.innerHTML = `
+        if (Array.isArray(groups)) {
+            groups.forEach(group => {
+                const div = document.createElement('div');
+                div.className = `contact-item ${activeContactId === group._id ? 'active' : ''}`;
+                div.dataset.id = group._id;
+                div.dataset.type = 'group';
+                div.innerHTML = `
                 <div class="avatar group-avatar">${group.name.charAt(0).toUpperCase()}</div>
                 <div class="contact-info">
                     <span class="contact-name">${group.name}</span>
                     <span class="contact-status">${group.members.length} members</span>
                 </div>
             `;
-            div.addEventListener('click', () => switchChat(group._id, group.name, 'group'));
-            groupsList.appendChild(div);
-        });
+                div.addEventListener('click', () => switchChat(group._id, group.name, 'group'));
+                groupsList.appendChild(div);
+            });
+        }
     } catch (error) {
         console.error('Failed to load groups:', error);
     }
@@ -283,9 +299,17 @@ async function loadAiHistory() {
         const res = await fetch('/api/history', {
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
+
+        if (res.status === 401 || res.status === 403) {
+            logout();
+            return;
+        }
+
+        if (!res.ok) throw new Error(`API Error: ${res.status}`);
+
         const history = await res.json();
 
-        if (history.length === 0) {
+        if (!Array.isArray(history) || history.length === 0) {
             showWelcomeMessage();
         } else {
             history.forEach(msg => {
@@ -296,6 +320,7 @@ async function loadAiHistory() {
         }
     } catch (error) {
         console.error('Failed to load AI history:', error);
+        chatHistory.innerHTML = `<div class="welcome-message"><p>Error loading history. Please refresh.</p></div>`;
     }
 }
 
@@ -304,9 +329,17 @@ async function loadUserHistory(otherUserId) {
         const res = await fetch(`/api/messages/${otherUserId}`, {
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
+
+        if (res.status === 401 || res.status === 403) {
+            logout();
+            return;
+        }
+
+        if (!res.ok) throw new Error(`API Error: ${res.status}`);
+
         const messages = await res.json();
 
-        if (messages.length === 0) {
+        if (!Array.isArray(messages) || messages.length === 0) {
             chatHistory.innerHTML = '<div class="welcome-message"><p>No messages yet. Say hello! 👋</p></div>';
         } else {
             messages.forEach(msg => {
@@ -325,9 +358,17 @@ async function loadGroupHistory(groupId) {
         const res = await fetch(`/api/groups/${groupId}/messages`, {
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
+
+        if (res.status === 401 || res.status === 403) {
+            logout();
+            return;
+        }
+
+        if (!res.ok) throw new Error(`API Error: ${res.status}`);
+
         const messages = await res.json();
 
-        if (messages.length === 0) {
+        if (!Array.isArray(messages) || messages.length === 0) {
             chatHistory.innerHTML = '<div class="welcome-message"><p>Welcome to the group! 👋</p></div>';
         } else {
             messages.forEach(msg => {
@@ -902,16 +943,7 @@ deleteCurrentNoteBtn.addEventListener('click', () => {
     }
 });
 
-// Update checkAuth to load notes
-const originalCheckAuth = checkAuth;
-checkAuth = function () {
-    originalCheckAuth(); // Call original
-    if (authToken) {
-        loadNotes();
-    }
-};
-
-// Initial Check (Redo to capture new checkAuth)
+// Initial Check
 checkAuth();
 
 // Expose deleteNote to global scope for onclick handler
