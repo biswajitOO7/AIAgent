@@ -36,22 +36,37 @@ const PORT = process.env.PORT || 7860;
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
 
 // Email Transporter
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT,
-    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-    },
-    tls: {
-        // do not fail on invalid certs
-        rejectUnauthorized: false
-    },
-    family: 4, // Force IPv4
-    debug: true, // show debug output
-    logger: true // log information in console
-});
+const dns = require('dns');
+
+// Email Transporter (placeholder, will be initialized after DNS resolution)
+let transporter;
+
+// Resolve SMTP Host to IPv4 to avoid ENETUNREACH on IPv6
+if (process.env.SMTP_HOST) {
+    dns.lookup(process.env.SMTP_HOST, { family: 4 }, (err, address) => {
+        if (err) {
+            console.error('Failed to resolve SMTP host:', err);
+            return;
+        }
+        console.log(`Resolved SMTP Host ${process.env.SMTP_HOST} to IPv4: ${address}`);
+
+        transporter = nodemailer.createTransport({
+            host: address, // Use resolved IPv4 address
+            port: process.env.SMTP_PORT,
+            secure: process.env.SMTP_SECURE === 'true',
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS,
+            },
+            tls: {
+                servername: process.env.SMTP_HOST, // verifying cert against original host
+                rejectUnauthorized: false
+            },
+            debug: true,
+            logger: true
+        });
+    });
+}
 
 // Middleware
 app.use(cors());
