@@ -97,7 +97,7 @@ const checkSMTPConnection = () => {
 
     socket.connect(port, host);
 };
-checkSMTPConnection();
+// checkSMTPConnection(); // Disabled: Known blockage on Free Spaces
 
 // Middleware
 app.use(cors());
