@@ -55,6 +55,8 @@ body {
     display: flex;
     flex-direction: column;
     padding: 20px;
+    overflow: hidden;
+    height: 100%;
 }
 
 .sidebar-header {
@@ -222,7 +224,8 @@ body {
     display: flex;
     flex-direction: column;
     padding: 20px;
-    overflow-y: auto;
+    overflow: hidden;
+    height: 100%;
 }
 
 .note-editor {
@@ -259,6 +262,9 @@ body {
     display: flex;
     flex-direction: column;
     background: var(--chat-bg);
+    overflow: hidden;
+    height: 100%;
+    position: relative;
 }
 
 .chat-header {
