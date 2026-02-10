@@ -25,8 +25,13 @@
                     <span id="current-username">Guest</span>
                     <span class="status">Online</span>
                 </div>
+                <button id="notification-btn" title="Notifications"
+                    style="background:none; border:none; color:white; cursor:pointer; margin-right: 5px; position: relative;">
+                    🔔
+                    <span id="notification-badge" class="notification-badge hidden">0</span>
+                </button>
                 <button id="test-notify-btn" title="Test Notification"
-                    style="background:none; border:none; color:white; cursor:pointer; margin-right: 5px;">🔔</button>
+                    style="background:none; border:none; color:white; cursor:pointer; margin-right: 5px; opacity: 0.5;">📢</button>
                 <button id="logout-btn" title="Logout">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -147,39 +152,56 @@
             </div>
         </div>
 
-        <!-- Right Sidebar (Notes) -->
-        <aside class="right-sidebar" id="right-sidebar">
-            <div class="sidebar-header">
-                <div class="sidebar-section-header" style="margin-top:0">
-                    <span>My Notes</span>
-                    <button id="add-note-btn" title="Add Note">+</button>
-                </div>
-            </div>
+    </div>
+    </div>
 
-            <!-- Notes List View -->
-            <div id="notes-list-view" class="notes-list-view">
-                <div class="contacts-list" id="notes-list">
-                    <!-- Notes will be loaded here -->
-                </div>
-            </div>
+    <!-- Notification Panel -->
+    <div id="notification-panel" class="notification-panel hidden">
+        <div class="notification-header">
+            <h3>Notifications</h3>
+            <button id="close-notifications-btn">×</button>
+        </div>
+        <div id="notification-list" class="notification-list">
+            <!-- Notifications will be loaded here -->
+            <div class="empty-notifications">No new notifications</div>
+        </div>
+        <button id="clear-notifications-btn" class="secondary-btn" style="width:100%; margin-top:10px;">Clear
+            All</button>
+    </div>
 
-            <!-- Note Editor View (Hidden by default) -->
-            <div id="note-editor-view" class="note-editor hidden">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h3 id="editor-title">Edit Note</h3>
-                    <button id="close-editor-btn" class="secondary-btn"
-                        style="padding: 5px 10px; font-size: 0.8rem;">Close</button>
-                </div>
-                <input type="hidden" id="note-id">
-                <input type="text" id="note-title" placeholder="Title" class="editor-input">
-                <textarea id="note-content" placeholder="Start typing..." class="editor-textarea"></textarea>
-                <div class="note-editor-actions">
-                    <button id="save-note-btn" class="primary-btn">Save</button>
-                    <button id="delete-current-note-btn" class="secondary-btn"
-                        style="background:rgba(239, 68, 68, 0.1); color:#ef4444;">Delete</button>
-                </div>
+    <!-- Right Sidebar (Notes) -->
+    <aside class="right-sidebar" id="right-sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-section-header" style="margin-top:0">
+                <span>My Notes</span>
+                <button id="add-note-btn" title="Add Note">+</button>
             </div>
-        </aside>
+        </div>
+
+        <!-- Notes List View -->
+        <div id="notes-list-view" class="notes-list-view">
+            <div class="contacts-list" id="notes-list">
+                <!-- Notes will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Note Editor View (Hidden by default) -->
+        <div id="note-editor-view" class="note-editor hidden">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 id="editor-title">Edit Note</h3>
+                <button id="close-editor-btn" class="secondary-btn"
+                    style="padding: 5px 10px; font-size: 0.8rem;">Close</button>
+            </div>
+            <input type="hidden" id="note-id">
+            <input type="text" id="note-title" placeholder="Title" class="editor-input">
+            <textarea id="note-content" placeholder="Start typing..." class="editor-textarea"></textarea>
+            <div class="note-editor-actions">
+                <button id="save-note-btn" class="primary-btn">Save</button>
+                <button id="delete-current-note-btn" class="secondary-btn"
+                    style="background:rgba(239, 68, 68, 0.1); color:#ef4444;">Delete</button>
+            </div>
+        </div>
+    </aside>
 
     </div>
     <script src="script.js"></script>

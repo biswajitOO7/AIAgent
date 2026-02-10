@@ -18,7 +18,14 @@ const groupsList = document.getElementById('groups-list');
 const currentChatName = document.getElementById('current-chat-name');
 const mobileMenuBtn = document.getElementById('mobile-menu-btn');
 const currentUserAvatar = document.getElementById('current-user-avatar');
+const currentUserAvatar = document.getElementById('current-user-avatar');
 const currentUsernameDisplay = document.getElementById('current-username');
+const notificationBtn = document.getElementById('notification-btn');
+const notificationPanel = document.getElementById('notification-panel');
+const notificationList = document.getElementById('notification-list');
+const closeNotificationsBtn = document.getElementById('close-notifications-btn');
+const clearNotificationsBtn = document.getElementById('clear-notifications-btn');
+const notificationBadge = document.getElementById('notification-badge');
 
 // Group Modal Elements
 const createGroupBtn = document.getElementById('create-group-btn');
@@ -33,7 +40,10 @@ let currentUsername = localStorage.getItem('username');
 let currentUserId = localStorage.getItem('userId');
 let activeContactId = 'ai-agent'; // 'ai-agent', userId, or groupId
 let activeType = 'ai'; // 'ai', 'user', 'group'
+let activeContactId = 'ai-agent'; // 'ai-agent', userId, or groupId
+let activeType = 'ai'; // 'ai', 'user', 'group'
 let pollingInterval;
+let notifications = JSON.parse(localStorage.getItem('notifications')) || [];
 
 // --- Auth Functions ---
 
@@ -101,8 +111,66 @@ function requestNotificationPermission() {
 }
 
 function sendNotification(title, body) {
+    // Add to history
+    const notification = {
+        id: Date.now(),
+        title,
+        body,
+        timestamp: new Date().toISOString(),
+        read: false
+    };
+    notifications.unshift(notification);
+    localStorage.setItem('notifications', JSON.stringify(notifications));
+    updateNotificationBadge();
+    renderNotifications();
+
     if ('Notification' in window && Notification.permission === 'granted') {
         new Notification(title, { body, icon: '/favicon.ico' }); // Use favicon if available or default
+    }
+}
+
+function updateNotificationBadge() {
+    const unreadCount = notifications.filter(n => !n.read).length;
+    if (unreadCount > 0) {
+        notificationBadge.textContent = unreadCount;
+        notificationBadge.classList.remove('hidden');
+    } else {
+        notificationBadge.classList.add('hidden');
+    }
+}
+
+function renderNotifications() {
+    notificationList.innerHTML = '';
+
+    if (notifications.length === 0) {
+        notificationList.innerHTML = '<div class="empty-notifications">No new notifications</div>';
+        return;
+    }
+
+    notifications.forEach(note => {
+        const div = document.createElement('div');
+        div.className = `notification-item ${note.read ? '' : 'unread'}`;
+        div.innerHTML = `
+            <div class="notification-title">${note.title}</div>
+            <div class="notification-body">${note.body}</div>
+            <div class="notification-time">${new Date(note.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+        `;
+        div.addEventListener('click', () => {
+            // Mark as read
+            note.read = true;
+            localStorage.setItem('notifications', JSON.stringify(notifications));
+            updateNotificationBadge();
+            renderNotifications();
+            // Optional: Navigate to chat if we stored chat ID
+        });
+        notificationList.appendChild(div);
+    });
+}
+
+function toggleNotificationPanel() {
+    notificationPanel.classList.toggle('hidden');
+    if (!notificationPanel.classList.contains('hidden')) {
+        renderNotifications();
     }
 }
 
@@ -449,6 +517,29 @@ authSwitchBtn.addEventListener('click', (e) => {
     toggleAuthMode();
 });
 
+notificationBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleNotificationPanel();
+});
+
+closeNotificationsBtn.addEventListener('click', toggleNotificationPanel);
+
+clearNotificationsBtn.addEventListener('click', () => {
+    notifications = [];
+    localStorage.setItem('notifications', JSON.stringify(notifications));
+    updateNotificationBadge();
+    renderNotifications();
+});
+
+// Close panel when clicking outside
+document.addEventListener('click', (e) => {
+    if (!notificationPanel.classList.contains('hidden') &&
+        !notificationPanel.contains(e.target) &&
+        !notificationBtn.contains(e.target)) {
+        notificationPanel.classList.add('hidden');
+    }
+});
+
 // Test Notification Button
 if (testNotifyBtn) {
     testNotifyBtn.addEventListener('click', () => {
@@ -522,6 +613,9 @@ authForm.addEventListener('submit', async (e) => {
             Notification.requestPermission();
 
             checkAuth();
+            updateNotificationBadge(); // Init badge
+        } else {
+            toggleAuthMode();
         } else {
             toggleAuthMode();
             authError.style.color = '#10b981';
