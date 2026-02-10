@@ -239,8 +239,13 @@ async function deleteNote(userId, noteId) {
     });
 }
 
+const isConnected = () => {
+    return !!client && !!db;
+};
+
 module.exports = {
     connectDB,
+    isConnected,
     registerUser,
     findUser,
     getAllUsers,

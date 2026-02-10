@@ -49,10 +49,15 @@ function authenticateToken(req, res, next) {
 // Debug Route
 app.get('/api/health', async (req, res) => {
     try {
+        const { isConnected } = require('./db');
         await connectDB();
+
+        const dbStatus = isConnected();
+
         res.json({
             status: 'ok',
-            mongo: !!(require('./db').client),
+            mongo: dbStatus,
+            version: '1.2.0', // Bump version to verify deployment
             env: {
                 hasUri: !!process.env.MONGODB_URI
             }
