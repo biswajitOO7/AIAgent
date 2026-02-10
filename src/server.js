@@ -50,10 +50,12 @@ if (process.env.SMTP_HOST) {
         }
         console.log(`Resolved SMTP Host ${process.env.SMTP_HOST} to IPv4: ${address}`);
 
+        const isSecure = process.env.SMTP_PORT == 465 || process.env.SMTP_SECURE === 'true';
+
         transporter = nodemailer.createTransport({
             host: address, // Use resolved IPv4 address
             port: process.env.SMTP_PORT,
-            secure: process.env.SMTP_SECURE === 'true',
+            secure: isSecure,
             auth: {
                 user: process.env.SMTP_USER,
                 pass: process.env.SMTP_PASS,
@@ -62,6 +64,7 @@ if (process.env.SMTP_HOST) {
                 servername: process.env.SMTP_HOST, // verifying cert against original host
                 rejectUnauthorized: false
             },
+            connectionTimeout: 10000, // 10 seconds timeout
             debug: true,
             logger: true
         });
