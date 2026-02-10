@@ -18,7 +18,6 @@ const groupsList = document.getElementById('groups-list');
 const currentChatName = document.getElementById('current-chat-name');
 const mobileMenuBtn = document.getElementById('mobile-menu-btn');
 const currentUserAvatar = document.getElementById('current-user-avatar');
-const currentUserAvatar = document.getElementById('current-user-avatar');
 const currentUsernameDisplay = document.getElementById('current-username');
 const notificationBtn = document.getElementById('notification-btn');
 const notificationPanel = document.getElementById('notification-panel');
@@ -38,8 +37,6 @@ let isLoginMode = true;
 let authToken = localStorage.getItem('authToken');
 let currentUsername = localStorage.getItem('username');
 let currentUserId = localStorage.getItem('userId');
-let activeContactId = 'ai-agent'; // 'ai-agent', userId, or groupId
-let activeType = 'ai'; // 'ai', 'user', 'group'
 let activeContactId = 'ai-agent'; // 'ai-agent', userId, or groupId
 let activeType = 'ai'; // 'ai', 'user', 'group'
 let pollingInterval;
