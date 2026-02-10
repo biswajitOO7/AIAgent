@@ -109,6 +109,9 @@ app.post('/api/auth/register', async (req, res) => {
 
         // Send Verification Email
         const verificationLink = `http://${req.headers.host}/api/auth/verify/${verificationToken}`;
+        console.log('--- VERIFICATION LINK (Debug) ---');
+        console.log(verificationLink);
+        console.log('---------------------------------');
 
         let template = await getEmailTemplate('verification');
         if (!template) {
