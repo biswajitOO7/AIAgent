@@ -44,26 +44,48 @@ let notifications = JSON.parse(localStorage.getItem('notifications')) || [];
 
 // --- Auth Functions ---
 
+// --- Auth Functions ---
+
 function toggleAuthMode() {
     isLoginMode = !isLoginMode;
+    const emailGroup = document.getElementById('email-group');
+    const emailInput = document.getElementById('email');
+
     if (isLoginMode) {
         authTitle.textContent = 'Login';
         authSubmitBtn.textContent = 'Login';
         authSwitchText.textContent = "Don't have an account?";
         authSwitchBtn.textContent = 'Register';
+        emailGroup.style.display = 'none';
+        emailInput.required = false;
     } else {
         authTitle.textContent = 'Register';
         authSubmitBtn.textContent = 'Register';
         authSwitchText.textContent = "Already have an account?";
         authSwitchBtn.textContent = 'Login';
+        emailGroup.style.display = 'block';
+        emailInput.required = true;
     }
     authError.textContent = '';
 }
 
 function checkAuth() {
+    // Check for verification success
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('verified') === 'true') {
+        authError.style.color = '#10b981';
+        authError.textContent = 'Email verified successfully! Please login.';
+        // Clear param
+        window.history.replaceState({}, document.title, "/");
+    }
+
     authToken = localStorage.getItem('authToken');
     currentUsername = localStorage.getItem('username');
     currentUserId = localStorage.getItem('userId');
+    // ... rest of checkAuth is handled by existing code context if we don't return here. 
+    // But wait, checkAuth is huge. I should just inject the check at the top.
+    // Rethinking: I will just replace the top of checkAuth OR add a separate init function. 
+    // Let's modify checkAuth to include the check.
 
     if (authToken) {
         if (!currentUserId) {
@@ -83,7 +105,7 @@ function checkAuth() {
 
         loadContacts();
         loadGroups();
-        loadNotes(); // Added here directly
+        loadNotes();
         loadChat(activeContactId, activeType);
         startPolling();
 
@@ -618,18 +640,21 @@ authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
+    const email = document.getElementById('email').value;
 
     authError.textContent = '';
 
     if (!username || !password) return;
+    if (!isLoginMode && !email) return; // Email required for register
 
     const endpoint = isLoginMode ? '/api/auth/login' : '/api/auth/register';
+    const body = isLoginMode ? { username, password } : { username, password, email };
 
     try {
         const res = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify(body)
         });
 
         const data = await res.json();
@@ -653,7 +678,7 @@ authForm.addEventListener('submit', async (e) => {
         } else {
             toggleAuthMode();
             authError.style.color = '#10b981';
-            authError.textContent = 'Registration successful! Please login.';
+            authError.textContent = 'Registration successful! Please verify your email.';
         }
     } catch (error) {
         authError.style.color = '#ef4444';

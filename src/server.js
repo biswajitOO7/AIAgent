@@ -2,7 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const jwt = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer');
 const {
     connectDB,
     saveInteraction,
@@ -22,7 +24,10 @@ const {
     saveNote,
     getNotes,
     deleteNote,
-    updateNote // Import
+    updateNote,
+    verifyUser,
+    getEmailTemplate,
+    createEmailTemplate
 } = require('./db');
 const { getAgentResponse } = require('./agent');
 require('dotenv').config();
@@ -30,6 +35,17 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 7860;
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
+
+// Email Transporter
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
+    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+    },
+});
 
 // Middleware
 app.use(cors());
@@ -87,14 +103,56 @@ app.post('/api/debug/claim_history', authenticateToken, async (req, res) => {
 // Routes
 app.post('/api/auth/register', async (req, res) => {
     try {
-        const { username, password } = req.body;
-        if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+        const { username, password, email } = req.body;
+        if (!username || !password || !email) return res.status(400).json({ error: 'Username, email, and password required' });
 
-        const userId = await registerUser(username, password);
-        res.status(201).json({ message: 'User registered', userId });
+        const { userId, verificationToken } = await registerUser(username, password, email);
+
+        // Send Verification Email
+        const verificationLink = `http://${req.headers.host}/api/auth/verify/${verificationToken}`;
+
+        let template = await getEmailTemplate('verification');
+        if (!template) {
+            // Seed default template if missing
+            await createEmailTemplate('verification', 'Verify your Email', 'Please click this link to verify your email: {{link}}');
+            template = { subject: 'Verify your Email', body: 'Please click this link to verify your email: {{link}}' };
+        }
+
+        const mailOptions = {
+            from: process.env.SMTP_FROM || '"AI Agent" <no-reply@aiagent.com>',
+            to: email,
+            subject: template.subject,
+            html: template.body.replace('{{link}}', `<a href="${verificationLink}">${verificationLink}</a>`)
+        };
+
+        try {
+            await transporter.sendMail(mailOptions);
+        } catch (emailError) {
+            console.error('Failed to send email:', emailError);
+            // We still register the user, but they might need to resend verification
+        }
+
+        res.status(201).json({ message: 'User registered. Please check your email to verify.', userId });
     } catch (error) {
         console.error('Registration Error:', error);
         res.status(400).json({ error: error.message });
+    }
+});
+
+app.get('/api/auth/verify/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        const user = await verifyUser(token);
+
+        if (!user) {
+            return res.status(400).send('Invalid or expired verification token.');
+        }
+
+        // Redirect to frontend with success query param
+        res.redirect('/?verified=true');
+    } catch (error) {
+        console.error('Verification Error:', error);
+        res.status(500).send('Verification failed.');
     }
 });
 
@@ -104,6 +162,10 @@ app.post('/api/auth/login', async (req, res) => {
         const user = await findUser(username);
 
         if (!user) return res.status(400).json({ error: 'User not found' });
+
+        if (user.isVerified === false) {
+            return res.status(403).json({ error: 'Please verify your email before logging in.' });
+        }
 
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) return res.status(400).json({ error: 'Invalid password' });

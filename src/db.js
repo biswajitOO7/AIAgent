@@ -9,6 +9,7 @@ let messagesCollection;
 let groupsCollection;
 let groupMessagesCollection;
 let notesCollection;
+let emailTemplatesCollection;
 
 let connectionError = null;
 
@@ -26,6 +27,7 @@ async function connectDB() {
         groupsCollection = db.collection('groups');
         groupMessagesCollection = db.collection('group_messages');
         notesCollection = db.collection('notes');
+        emailTemplatesCollection = db.collection('email_templates');
         console.log('Connected to MongoDB successfully');
         connectionError = null;
     } catch (error) {
@@ -35,19 +37,63 @@ async function connectDB() {
     }
 }
 
-async function registerUser(username, password) {
+async function registerUser(username, password, email) {
     if (!usersCollection) await connectDB();
+
     const existingUser = await usersCollection.findOne({ username });
     if (existingUser) {
         throw new Error('Username already exists');
     }
+
+    if (email) {
+        const existingEmail = await usersCollection.findOne({ email });
+        if (existingEmail) {
+            throw new Error('Email already registered');
+        }
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
+    const verificationToken = require('crypto').randomBytes(32).toString('hex');
+
     const result = await usersCollection.insertOne({
         username,
+        email,
         password: hashedPassword,
+        isVerified: false,
+        verificationToken,
         createdAt: new Date()
     });
-    return result.insertedId;
+
+    return { userId: result.insertedId, verificationToken };
+}
+
+async function verifyUser(token) {
+    if (!usersCollection) await connectDB();
+    const result = await usersCollection.findOneAndUpdate(
+        { verificationToken: token },
+        {
+            $set: { isVerified: true, verificationToken: null }
+        },
+        { returnDocument: 'after' }
+    );
+    return result; // returning the *updated* document (or null if not found) if using returnDocument: 'after' depends on driver version. 
+    // MongoDB driver v6 returns result directly? Let's assume standard behavior or check result.value.
+    // Actually findOneAndUpdate returns a Result object.
+
+}
+
+async function getEmailTemplate(name) {
+    if (!emailTemplatesCollection) await connectDB();
+    return await emailTemplatesCollection.findOne({ name });
+}
+
+async function createEmailTemplate(name, subject, body) {
+    if (!emailTemplatesCollection) await connectDB();
+    await emailTemplatesCollection.updateOne(
+        { name },
+        { $set: { name, subject, body, updatedAt: new Date() } },
+        { upsert: true }
+    );
 }
 
 async function findUser(username) {
@@ -292,5 +338,9 @@ module.exports = {
     saveNote,
     getNotes,
     deleteNote,
-    updateNote // Export
+    deleteNote,
+    updateNote,
+    verifyUser,
+    getEmailTemplate,
+    createEmailTemplate
 };
