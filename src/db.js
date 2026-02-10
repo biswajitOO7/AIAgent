@@ -9,10 +9,13 @@ let messagesCollection;
 let groupsCollection;
 let groupMessagesCollection;
 
+let connectionError = null;
+
 async function connectDB() {
     if (client) return;
 
     try {
+        console.log("Connecting to MongoDB...");
         client = new MongoClient(process.env.MONGODB_URI);
         await client.connect();
         db = client.db();
@@ -21,10 +24,12 @@ async function connectDB() {
         messagesCollection = db.collection('direct_messages');
         groupsCollection = db.collection('groups');
         groupMessagesCollection = db.collection('group_messages');
-        console.log('Connected to MongoDB');
+        console.log('Connected to MongoDB successfully');
+        connectionError = null;
     } catch (error) {
         console.error('MongoDB connection error:', error);
-        process.exit(1);
+        connectionError = error.message;
+        // Do not exit, allow health check to report
     }
 }
 
