@@ -382,8 +382,12 @@ async function loadNotes() {
 }
 
 async function createNote() {
+    console.log("createNote called"); // Debug
     const content = noteContentInput.value.trim();
-    if (!content) return;
+    if (!content) {
+        alert("Note content is empty!");
+        return;
+    }
 
     try {
         const res = await fetch('/api/notes', {
@@ -401,10 +405,12 @@ async function createNote() {
             loadNotes();
         } else {
             const data = await res.json();
+            console.error("Server Error Data:", data);
             alert(`Failed to create note: ${data.error || res.statusText}`);
         }
     } catch (error) {
         console.error('Error creating note:', error);
+        alert(`Error creating note: ${error.message}`);
     }
 }
 
@@ -499,6 +505,7 @@ mobileMenuBtn.addEventListener('click', () => {
 createGroupBtn.addEventListener('click', openCreateGroupModal);
 
 addNoteBtn.addEventListener('click', () => {
+    console.log("Add Note Button Clicked");
     noteModal.classList.remove('hidden');
 });
 
@@ -508,6 +515,7 @@ cancelNoteBtn.addEventListener('click', () => {
 
 createNoteForm.addEventListener('submit', (e) => {
     e.preventDefault();
+    console.log("Form submitted"); // Debug
     createNote();
 });
 
