@@ -10,6 +10,8 @@ let groupsCollection;
 let groupMessagesCollection;
 let notesCollection;
 
+let connectionError = null;
+
 async function connectDB() {
     if (!client) {
         try {
@@ -17,9 +19,11 @@ async function connectDB() {
             await client.connect();
             db = client.db();
             console.log('Connected to MongoDB');
+            connectionError = null;
         } catch (error) {
             console.error('MongoDB connection error:', error);
-            process.exit(1);
+            connectionError = error.message;
+            // process.exit(1); // Don't exit, let health check report it
         }
     }
 
@@ -34,7 +38,25 @@ async function connectDB() {
     }
 }
 
-async function registerUser(username, password) {
+// ... existing functions ...
+
+const isConnected = () => {
+    return !!client && !!db;
+};
+
+const getConnectionError = () => {
+    return connectionError;
+};
+
+module.exports = {
+    connectDB,
+    isConnected,
+    getConnectionError,
+    registerUser,
+    findUser,
+    // ...
+
+    async function registerUser(username, password) {
     if (!usersCollection) await connectDB();
     const existingUser = await usersCollection.findOne({ username });
     if (existingUser) {
