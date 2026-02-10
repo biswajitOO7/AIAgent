@@ -567,5 +567,122 @@ async function sendToGroup(groupId, content) {
     }
 }
 
-// Initial Check
+// --- Notes Functions ---
+
+const notesList = document.getElementById('notes-list');
+const addNoteBtn = document.getElementById('add-note-btn');
+const noteModal = document.getElementById('note-modal');
+const createNoteForm = document.getElementById('create-note-form');
+const noteContentInput = document.getElementById('note-content');
+const cancelNoteBtn = document.getElementById('cancel-note-btn');
+
+async function loadNotes() {
+    try {
+        const res = await fetch('/api/notes', {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const notes = await res.json();
+
+        notesList.innerHTML = '';
+
+        notes.forEach(note => {
+            const div = document.createElement('div');
+            div.className = 'contact-item note-item';
+            div.dataset.id = note.id;
+            // Truncate long content for preview
+            const preview = note.content.length > 30 ? note.content.substring(0, 30) + '...' : note.content;
+
+            div.innerHTML = `
+                <div class="contact-info note-info">
+                    <span class="contact-name">${preview}</span>
+                    <span class="contact-status">${new Date(note.timestamp).toLocaleDateString()}</span>
+                </div>
+                <button class="delete-note-btn" onclick="deleteNote('${note.id}', event)">×</button>
+            `;
+            // Clicking a note could open it full detail? For now just list.
+            div.onclick = (e) => {
+                if (e.target.classList.contains('delete-note-btn')) return;
+                alert(note.content); // Simple view for now
+            };
+            notesList.appendChild(div);
+        });
+    } catch (error) {
+        console.error('Failed to load notes:', error);
+    }
+}
+
+async function createNote() {
+    const content = noteContentInput.value.trim();
+    if (!content) return;
+
+    try {
+        const res = await fetch('/api/notes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ content })
+        });
+
+        if (res.ok) {
+            noteModal.classList.add('hidden');
+            noteContentInput.value = '';
+            loadNotes();
+        } else {
+            alert('Failed to save note');
+        }
+    } catch (error) {
+        console.error('Error creating note:', error);
+    }
+}
+
+async function deleteNote(noteId, event) {
+    if (event) event.stopPropagation();
+    if (!confirm('Delete this note?')) return;
+
+    try {
+        const res = await fetch(`/api/notes/${noteId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+
+        if (res.ok) {
+            loadNotes();
+        } else {
+            alert('Failed to delete note');
+        }
+    } catch (error) {
+        console.error('Error deleting note:', error);
+    }
+}
+
+// --- Notes Event Listeners ---
+
+addNoteBtn.addEventListener('click', () => {
+    noteModal.classList.remove('hidden');
+});
+
+cancelNoteBtn.addEventListener('click', () => {
+    noteModal.classList.add('hidden');
+});
+
+createNoteForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    createNote();
+});
+
+// Update checkAuth to load notes
+const originalCheckAuth = checkAuth;
+checkAuth = function () {
+    originalCheckAuth(); // Call original
+    if (authToken) {
+        loadNotes();
+    }
+};
+
+// Initial Check (Redo to capture new checkAuth)
 checkAuth();
+
+// Expose deleteNote to global scope for onclick handler
+window.deleteNote = deleteNote;
