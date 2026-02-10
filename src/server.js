@@ -44,6 +44,8 @@ const transporter = nodemailer.createTransport({
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
     },
+    debug: true, // show debug output
+    logger: true // log information in console
 });
 
 // Middleware
