@@ -48,9 +48,7 @@ const getConnectionError = () => {
     return connectionError;
 };
 
-const getConnectionError = () => {
-    return connectionError;
-};
+
 if (!usersCollection) await connectDB();
 const existingUser = await usersCollection.findOne({ username });
 if (existingUser) {
