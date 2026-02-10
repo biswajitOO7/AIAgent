@@ -693,10 +693,12 @@ async function saveNoteHandler() {
             closeNoteEditor(); // Go back to list
             loadNotes(); // Refresh list
         } else {
-            alert('Failed to save note');
+            const errorData = await res.json();
+            alert(`Failed to save note: ${errorData.error || res.statusText} (${res.status})`);
         }
     } catch (error) {
         console.error('Error saving note:', error);
+        alert(`Error saving note: ${error.message}`);
     }
 }
 
