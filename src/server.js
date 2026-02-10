@@ -129,8 +129,9 @@ app.post('/api/auth/register', async (req, res) => {
 
         try {
             await transporter.sendMail(mailOptions);
+            console.log("Email sent successfully!");
         } catch (emailError) {
-            console.error('Failed to send email:', emailError);
+            console.error('FAILED TO SEND EMAIL. Error details:', emailError);
             // We still register the user, but they might need to resend verification
         }
 
