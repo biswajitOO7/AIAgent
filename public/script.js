@@ -500,6 +500,14 @@ async function sendToAi(message) {
             body: JSON.stringify({ message })
         });
 
+        // 1. Check for HTTP errors (like 401, 403, 500)
+        if (!res.ok) {
+            // Try to read error text (it might not be JSON)
+            const errorText = await res.text();
+            throw new Error(`Server Error ${res.status}: ${errorText || res.statusText}`);
+        }
+
+        // 2. Parsed JSON
         const data = await res.json();
         typingDiv.remove();
 
@@ -509,8 +517,18 @@ async function sendToAi(message) {
             appendMessage("Something went wrong.", 'ai');
         }
     } catch (error) {
+        console.error('SendToAi Error:', error);
         typingDiv.remove();
-        appendMessage("Error connecting to server.", 'ai');
+        // Show the ACTUAL error in the chat
+        appendMessage(`Connection Error: ${error.message}`, 'ai');
+
+        // If 401/403, force logout prompt
+        if (error.message.includes('401') || error.message.includes('403')) {
+            setTimeout(() => {
+                alert("Session expired or invalid. Please login again.");
+                logout();
+            }, 2000);
+        }
     } finally {
         sendBtn.disabled = false;
         userInput.focus();
