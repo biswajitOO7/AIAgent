@@ -452,12 +452,21 @@ authSwitchBtn.addEventListener('click', (e) => {
 // Test Notification Button
 if (testNotifyBtn) {
     testNotifyBtn.addEventListener('click', () => {
-        if ('Notification' in window) {
+        if (!('Notification' in window)) {
+            alert("This browser does not support desktop notifications");
+            return;
+        }
+
+        if (Notification.permission === 'granted') {
+            new Notification("Test Notification", { body: "Everything is working!", icon: '/favicon.ico' });
+        } else if (Notification.permission === 'denied') {
+            alert("Notifications are blocked. Please enable them in your browser settings (click the lock/site icon in the address bar).");
+        } else {
             Notification.requestPermission().then(permission => {
                 if (permission === 'granted') {
-                    new Notification("Test Notification", { body: "This is a test message!", icon: '/favicon.ico' });
+                    new Notification("Test Notification", { body: "Thanks for enabling!", icon: '/favicon.ico' });
                 } else {
-                    alert("Notifications are not allowed. Please enable them in your browser settings.");
+                    console.log("Permission was dismissed or denied.");
                 }
             });
         }
