@@ -46,6 +46,22 @@ function authenticateToken(req, res, next) {
     });
 }
 
+// Debug Route
+app.get('/api/health', async (req, res) => {
+    try {
+        await connectDB();
+        res.json({
+            status: 'ok',
+            mongo: !!(require('./db').client),
+            env: {
+                hasUri: !!process.env.MONGODB_URI
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ status: 'error', error: e.message });
+    }
+});
+
 // Routes
 app.post('/api/auth/register', async (req, res) => {
     try {
