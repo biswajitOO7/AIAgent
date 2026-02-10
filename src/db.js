@@ -8,11 +8,15 @@ let chatsCollection;
 let messagesCollection;
 let groupsCollection;
 let groupMessagesCollection;
+let notesCollection;
+
+let connectionError = null;
 
 async function connectDB() {
     if (client) return;
 
     try {
+        console.log("Connecting to MongoDB...");
         client = new MongoClient(process.env.MONGODB_URI);
         await client.connect();
         db = client.db();
@@ -21,10 +25,13 @@ async function connectDB() {
         messagesCollection = db.collection('direct_messages');
         groupsCollection = db.collection('groups');
         groupMessagesCollection = db.collection('group_messages');
-        console.log('Connected to MongoDB');
+        notesCollection = db.collection('notes');
+        console.log('Connected to MongoDB successfully');
+        connectionError = null;
     } catch (error) {
         console.error('MongoDB connection error:', error);
-        process.exit(1);
+        connectionError = error.message;
+        // Do not exit, allow health check to report
     }
 }
 
@@ -65,6 +72,12 @@ async function saveInteraction(userId, userInput, agentResponse) {
 
 async function getRecentHistory(userId, limit = 10) {
     if (!chatsCollection) await connectDB();
+    // Double check connection
+    if (!chatsCollection) {
+        console.error("Attempted to fetch history but chatsCollection is null. DB Connection Error:", connectionError);
+        throw new Error("Database Disconnected");
+    }
+
     const history = await chatsCollection.find({ userId: new ObjectId(userId) })
         .sort({ timestamp: -1 })
         .limit(limit)
@@ -158,8 +171,105 @@ async function getGroupMessages(groupId, limit = 50) {
     }));
 }
 
+// Safe collection access helper
+function getCollection(name) {
+    if (!db) {
+        throw new Error('Database not connected');
+    }
+    return db.collection(name);
+}
+
+const getConnectionError = () => {
+    return connectionError;
+};
+
+async function getRecentHistory(userId, limit = 10) {
+    if (!chatsCollection) await connectDB();
+    if (!chatsCollection) throw new Error("Database not initialized");
+
+    const history = await chatsCollection.find({ userId: new ObjectId(userId) })
+        .sort({ timestamp: -1 })
+        .limit(limit)
+        .toArray();
+
+    return history.reverse().map(doc => ({
+        input: doc.userInput,
+        output: doc.agentResponse
+    }));
+}
+
+// ... (Updating other functions similarly to be safe would be good, but let's focus on history first to be surgical)
+
+// Debug helper
+async function getDebugStats() {
+    if (!usersCollection) await connectDB();
+    const userCount = await usersCollection.countDocuments();
+    const chatCount = await chatsCollection.countDocuments();
+    const sampleChat = await chatsCollection.findOne({});
+
+    return {
+        userCount,
+        chatCount,
+        sampleChat
+    };
+}
+
+// Repair helper
+async function claimOrphanedChats(userId) {
+    if (!chatsCollection) await connectDB();
+    const result = await chatsCollection.updateMany(
+        { userId: { $exists: false } }, // Find chats without userId
+        { $set: { userId: new ObjectId(userId) } } // Assign to this user
+    );
+    return result.modifiedCount;
+}
+
+// Notes Functions
+
+async function saveNote(userId, title, content) {
+    if (!notesCollection) await connectDB();
+    const result = await notesCollection.insertOne({
+        userId: new ObjectId(userId),
+        title: title || "Untitled Note",
+        content,
+        timestamp: new Date()
+    });
+    return result.insertedId;
+}
+
+async function getNotes(userId) {
+    if (!notesCollection) await connectDB();
+    return await notesCollection.find({ userId: new ObjectId(userId) })
+        .sort({ timestamp: -1 })
+        .toArray(); // No map needed, return raw doc with title
+}
+
+async function deleteNote(userId, noteId) {
+    if (!notesCollection) await connectDB();
+    if (!notesCollection) throw new Error("Database not initialized");
+
+    await notesCollection.deleteOne({
+        _id: new ObjectId(noteId),
+        userId: new ObjectId(userId) // Ensure ownership
+    });
+}
+
+async function updateNote(userId, noteId, title, content) {
+    if (!notesCollection) await connectDB();
+    if (!notesCollection) throw new Error("Database not initialized");
+
+    const result = await notesCollection.updateOne(
+        { _id: new ObjectId(noteId), userId: new ObjectId(userId) },
+        { $set: { title: title || "Untitled Note", content: content, updatedAt: new Date() } }
+    );
+    return result.modifiedCount;
+}
+
 module.exports = {
     connectDB,
+    getConnectionError,
+    getDebugStats,
+    claimOrphanedChats,
     registerUser,
     findUser,
     getAllUsers,
@@ -170,5 +280,9 @@ module.exports = {
     createGroup,
     getUserGroups,
     saveGroupMessage,
-    getGroupMessages
+    getGroupMessages,
+    saveNote,
+    getNotes,
+    deleteNote,
+    updateNote // Export
 };

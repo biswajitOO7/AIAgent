@@ -56,6 +56,15 @@
             <div class="contacts-list" id="groups-list">
                 <!-- Groups will be loaded here -->
             </div>
+
+            <!-- Notes Section -->
+            <div class="sidebar-section-header">
+                <span>My Notes</span>
+                <button id="add-note-btn" title="Add Note">+</button>
+            </div>
+            <div class="contacts-list" id="notes-list">
+                <!-- Notes will be loaded here -->
+            </div>
         </aside>
 
         <!-- Main Chat Area -->
@@ -138,6 +147,28 @@
                     <div class="modal-buttons">
                         <button type="button" id="cancel-group-btn" class="secondary-btn">Cancel</button>
                         <button type="submit" id="submit-group-btn" class="primary-btn">Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Note Modal (Create/Edit) -->
+        <div id="note-modal" class="auth-modal hidden">
+            <div class="auth-box">
+                <h2 id="note-modal-title">Create New Note</h2>
+                <form id="create-note-form">
+                    <input type="hidden" id="note-id">
+                    <div class="form-group">
+                        <label for="note-title">Title</label>
+                        <input type="text" id="note-title" placeholder="Note Title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="note-content">To-Do / Note</label>
+                        <textarea id="note-content" rows="10" required placeholder="Write your note here..."></textarea>
+                    </div>
+                    <div class="modal-buttons">
+                        <button type="button" id="cancel-note-btn" class="secondary-btn">Cancel</button>
+                        <button type="submit" id="submit-note-btn" class="primary-btn">Save</button>
                     </div>
                 </form>
             </div>

@@ -15,7 +15,14 @@ const {
     createGroup,
     getUserGroups,
     saveGroupMessage,
-    getGroupMessages
+    getGroupMessages,
+    getConnectionError,
+    getDebugStats,
+    claimOrphanedChats,
+    saveNote,
+    getNotes,
+    deleteNote,
+    updateNote // Import
 } = require('./db');
 const { getAgentResponse } = require('./agent');
 require('dotenv').config();
@@ -42,6 +49,40 @@ function authenticateToken(req, res, next) {
         next();
     });
 }
+
+// Health Check
+app.get('/api/health', async (req, res) => {
+    try {
+        await connectDB();
+        const err = getConnectionError();
+        if (err) {
+            return res.status(503).json({ status: 'error', dbError: err });
+        }
+        res.json({ status: 'ok', message: 'Database connected' });
+    } catch (e) {
+        res.status(500).json({ status: 'error', error: e.message });
+    }
+});
+
+// Deep Debug Route
+app.get('/api/debug/db', async (req, res) => {
+    try {
+        const stats = await getDebugStats();
+        res.json(stats);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Repair Route
+app.post('/api/debug/claim_history', authenticateToken, async (req, res) => {
+    try {
+        const count = await claimOrphanedChats(req.user.userId);
+        res.json({ message: `Successfully claimed ${count} orphaned chat messages.` });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // Routes
 app.post('/api/auth/register', async (req, res) => {
@@ -184,6 +225,48 @@ app.post('/api/groups/:groupId/messages', authenticateToken, async (req, res) =>
     } catch (error) {
         console.error('Send Group Message Error:', error);
         res.status(500).json({ error: 'Failed to send message' });
+    }
+});
+
+// Notes Routes
+app.post('/api/notes', authenticateToken, async (req, res) => {
+    try {
+        const { title, content } = req.body;
+        if (!content) return res.status(400).json({ error: 'Content required' });
+        const noteId = await saveNote(req.user.userId, title, content);
+        res.status(201).json({ noteId });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to save note' });
+    }
+});
+
+app.get('/api/notes', authenticateToken, async (req, res) => {
+    try {
+        const notes = await getNotes(req.user.userId);
+        res.json(notes);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch notes' });
+    }
+});
+
+app.delete('/api/notes/:id', authenticateToken, async (req, res) => {
+    try {
+        await deleteNote(req.user.userId, req.params.id);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to delete note' });
+    }
+});
+
+app.put('/api/notes/:id', authenticateToken, async (req, res) => {
+    try {
+        const { title, content } = req.body;
+        if (!content) return res.status(400).json({ error: 'Content required' });
+
+        await updateNote(req.user.userId, req.params.id, title, content);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to update note' });
     }
 });
 

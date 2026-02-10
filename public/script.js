@@ -500,6 +500,14 @@ async function sendToAi(message) {
             body: JSON.stringify({ message })
         });
 
+        // 1. Check for HTTP errors (like 401, 403, 500)
+        if (!res.ok) {
+            // Try to read error text (it might not be JSON)
+            const errorText = await res.text();
+            throw new Error(`Server Error ${res.status}: ${errorText || res.statusText}`);
+        }
+
+        // 2. Parsed JSON
         const data = await res.json();
         typingDiv.remove();
 
@@ -509,8 +517,18 @@ async function sendToAi(message) {
             appendMessage("Something went wrong.", 'ai');
         }
     } catch (error) {
+        console.error('SendToAi Error:', error);
         typingDiv.remove();
-        appendMessage("Error connecting to server.", 'ai');
+        // Show the ACTUAL error in the chat
+        appendMessage(`Connection Error: ${error.message}`, 'ai');
+
+        // If 401/403, force logout prompt
+        if (error.message.includes('401') || error.message.includes('403')) {
+            setTimeout(() => {
+                alert("Session expired or invalid. Please login again.");
+                logout();
+            }, 2000);
+        }
     } finally {
         sendBtn.disabled = false;
         userInput.focus();
@@ -549,5 +567,161 @@ async function sendToGroup(groupId, content) {
     }
 }
 
-// Initial Check
+// --- Notes Functions ---
+
+const notesList = document.getElementById('notes-list');
+const addNoteBtn = document.getElementById('add-note-btn');
+const noteModal = document.getElementById('note-modal');
+const noteModalTitle = document.getElementById('note-modal-title');
+const createNoteForm = document.getElementById('create-note-form');
+const noteTitleInput = document.getElementById('note-title');
+const noteContentInput = document.getElementById('note-content');
+const noteIdInput = document.getElementById('note-id');
+const cancelNoteBtn = document.getElementById('cancel-note-btn');
+
+async function loadNotes() {
+    try {
+        const res = await fetch('/api/notes', {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const notes = await res.json();
+
+        notesList.innerHTML = '';
+
+        notes.forEach(note => {
+            const div = document.createElement('div');
+            div.className = 'contact-item note-item';
+            div.dataset.id = note.id;
+
+            // Truncate long content for preview
+            const preview = note.content.length > 40 ? note.content.substring(0, 40) + '...' : note.content;
+
+            div.innerHTML = `
+                <div class="contact-info note-info">
+                    <span class="contact-name">${note.title || 'Untitled Note'}</span>
+                    <span class="contact-status" style="font-size: 0.75rem; opacity: 0.7;">${preview}</span>
+                </div>
+                <button class="delete-note-btn" onclick="deleteNote('${note.id}', event)">×</button>
+            `;
+
+            // Click to Edit/View
+            div.onclick = (e) => {
+                if (e.target.classList.contains('delete-note-btn')) return;
+                openNoteModal(note);
+            };
+            notesList.appendChild(div);
+        });
+    } catch (error) {
+        console.error('Failed to load notes:', error);
+    }
+}
+
+function openNoteModal(note = null) {
+    if (note) {
+        // Edit Mode
+        noteModalTitle.textContent = "Edit Note";
+        noteIdInput.value = note.id;
+        noteTitleInput.value = note.title || "";
+        noteContentInput.value = note.content;
+    } else {
+        // Create Mode
+        noteModalTitle.textContent = "Create New Note";
+        noteIdInput.value = "";
+        noteTitleInput.value = "";
+        noteContentInput.value = "";
+    }
+    noteModal.classList.remove('hidden');
+    // Focus title if empty, otherwise content
+    if (!noteTitleInput.value) {
+        noteTitleInput.focus();
+    } else {
+        noteContentInput.focus();
+    }
+}
+
+async function saveNoteHandler() {
+    const title = noteTitleInput.value.trim();
+    const content = noteContentInput.value.trim();
+    const noteId = noteIdInput.value;
+
+    if (!content) return;
+
+    try {
+        let url = '/api/notes';
+        let method = 'POST';
+        let body = { title, content };
+
+        if (noteId) {
+            url = `/api/notes/${noteId}`;
+            method = 'PUT';
+        }
+
+        const res = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify(body)
+        });
+
+        if (res.ok) {
+            noteModal.classList.add('hidden');
+            loadNotes();
+        } else {
+            alert('Failed to save note');
+        }
+    } catch (error) {
+        console.error('Error saving note:', error);
+    }
+}
+
+async function deleteNote(noteId, event) {
+    if (event) event.stopPropagation();
+    if (!confirm('Delete this note?')) return;
+
+    try {
+        const res = await fetch(`/api/notes/${noteId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+
+        if (res.ok) {
+            loadNotes();
+        } else {
+            alert('Failed to delete note');
+        }
+    } catch (error) {
+        console.error('Error deleting note:', error);
+    }
+}
+
+// --- Notes Event Listeners ---
+
+addNoteBtn.addEventListener('click', () => {
+    openNoteModal(null);
+});
+
+cancelNoteBtn.addEventListener('click', () => {
+    noteModal.classList.add('hidden');
+});
+
+createNoteForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    saveNoteHandler();
+});
+
+// Update checkAuth to load notes
+const originalCheckAuth = checkAuth;
+checkAuth = function () {
+    originalCheckAuth(); // Call original
+    if (authToken) {
+        loadNotes();
+    }
+};
+
+// Initial Check (Redo to capture new checkAuth)
 checkAuth();
+
+// Expose deleteNote to global scope for onclick handler
+window.deleteNote = deleteNote;
