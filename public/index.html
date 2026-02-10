@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Agent | Intelligent Assistant</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
 
@@ -152,7 +152,40 @@
             </div>
         </div>
 
-    </div>
+        <!-- Right Sidebar (Notes) -->
+        <aside class="right-sidebar" id="right-sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-section-header" style="margin-top:0">
+                    <span>My Notes</span>
+                    <button id="add-note-btn" title="Add Note">+</button>
+                </div>
+            </div>
+
+            <!-- Notes List View -->
+            <div id="notes-list-view" class="notes-list-view">
+                <div class="contacts-list" id="notes-list">
+                    <!-- Notes will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Note Editor View (Hidden by default) -->
+            <div id="note-editor-view" class="note-editor hidden">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h3 id="editor-title">Edit Note</h3>
+                    <button id="close-editor-btn" class="secondary-btn"
+                        style="padding: 5px 10px; font-size: 0.8rem;">Close</button>
+                </div>
+                <input type="hidden" id="note-id">
+                <input type="text" id="note-title" placeholder="Title" class="editor-input">
+                <textarea id="note-content" placeholder="Start typing..." class="editor-textarea"></textarea>
+                <div class="note-editor-actions">
+                    <button id="save-note-btn" class="primary-btn">Save</button>
+                    <button id="delete-current-note-btn" class="secondary-btn"
+                        style="background:rgba(239, 68, 68, 0.1); color:#ef4444;">Delete</button>
+                </div>
+            </div>
+        </aside>
+
     </div>
 
     <!-- Notification Panel -->
@@ -169,41 +202,6 @@
             All</button>
     </div>
 
-    <!-- Right Sidebar (Notes) -->
-    <aside class="right-sidebar" id="right-sidebar">
-        <div class="sidebar-header">
-            <div class="sidebar-section-header" style="margin-top:0">
-                <span>My Notes</span>
-                <button id="add-note-btn" title="Add Note">+</button>
-            </div>
-        </div>
-
-        <!-- Notes List View -->
-        <div id="notes-list-view" class="notes-list-view">
-            <div class="contacts-list" id="notes-list">
-                <!-- Notes will be loaded here -->
-            </div>
-        </div>
-
-        <!-- Note Editor View (Hidden by default) -->
-        <div id="note-editor-view" class="note-editor hidden">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h3 id="editor-title">Edit Note</h3>
-                <button id="close-editor-btn" class="secondary-btn"
-                    style="padding: 5px 10px; font-size: 0.8rem;">Close</button>
-            </div>
-            <input type="hidden" id="note-id">
-            <input type="text" id="note-title" placeholder="Title" class="editor-input">
-            <textarea id="note-content" placeholder="Start typing..." class="editor-textarea"></textarea>
-            <div class="note-editor-actions">
-                <button id="save-note-btn" class="primary-btn">Save</button>
-                <button id="delete-current-note-btn" class="secondary-btn"
-                    style="background:rgba(239, 68, 68, 0.1); color:#ef4444;">Delete</button>
-            </div>
-        </div>
-    </aside>
-
-    </div>
     <script src="script.js"></script>
 </body>
 
