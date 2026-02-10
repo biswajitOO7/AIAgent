@@ -11,22 +11,26 @@ let groupMessagesCollection;
 let notesCollection;
 
 async function connectDB() {
-    if (client) return;
+    if (!client) {
+        try {
+            client = new MongoClient(process.env.MONGODB_URI);
+            await client.connect();
+            db = client.db();
+            console.log('Connected to MongoDB');
+        } catch (error) {
+            console.error('MongoDB connection error:', error);
+            process.exit(1);
+        }
+    }
 
-    try {
-        client = new MongoClient(process.env.MONGODB_URI);
-        await client.connect();
-        db = client.db();
+    // Always assign collections to ensure they are available
+    if (db) {
         usersCollection = db.collection('users');
         chatsCollection = db.collection('chat_history');
         messagesCollection = db.collection('direct_messages');
         groupsCollection = db.collection('groups');
         groupMessagesCollection = db.collection('group_messages');
         notesCollection = db.collection('notes');
-        console.log('Connected to MongoDB');
-    } catch (error) {
-        console.error('MongoDB connection error:', error);
-        process.exit(1);
     }
 }
 

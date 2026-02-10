@@ -400,7 +400,8 @@ async function createNote() {
             noteContentInput.value = '';
             loadNotes();
         } else {
-            alert('Failed to create note');
+            const data = await res.json();
+            alert(`Failed to create note: ${data.error || res.statusText}`);
         }
     } catch (error) {
         console.error('Error creating note:', error);

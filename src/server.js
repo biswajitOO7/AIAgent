@@ -211,7 +211,7 @@ app.post('/api/notes', authenticateToken, async (req, res) => {
         res.status(201).json({ success: true, noteId });
     } catch (error) {
         console.error('Create Note Error:', error);
-        res.status(500).json({ error: 'Failed to create note' });
+        res.status(500).json({ error: error.message || 'Failed to create note' });
     }
 });
 
