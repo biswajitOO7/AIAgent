@@ -604,15 +604,11 @@ authForm.addEventListener('submit', async (e) => {
             localStorage.setItem('username', currentUsername);
             localStorage.setItem('userId', currentUserId);
 
-            localStorage.setItem('userId', currentUserId);
-
             // Request permission explicitly on user interaction (Login click)
             Notification.requestPermission();
 
             checkAuth();
             updateNotificationBadge(); // Init badge
-        } else {
-            toggleAuthMode();
         } else {
             toggleAuthMode();
             authError.style.color = '#10b981';
