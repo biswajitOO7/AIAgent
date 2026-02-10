@@ -23,26 +23,28 @@ body {
     color: var(--text-color);
     font-family: var(--font-family);
     height: 100vh;
+    width: 100vw;
     display: flex;
     justify-content: center;
     align-items: center;
     overflow: hidden;
+    margin: 0;
+    padding: 0;
 }
 
 .app-container {
     width: 100%;
-    max-width: 1400px;
-    /* Wider for 3 columns */
-    height: 95vh;
+    height: 100%;
+    max-width: none;
     background: var(--chat-bg);
-    border-radius: 20px;
-    border: 1px solid var(--border-color);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
     display: grid;
     grid-template-columns: 280px 1fr 300px;
     /* Sidebar, Chat, Notes */
     overflow: hidden;
-    margin: 20px;
+    margin: 0;
 }
 
 /* Sidebar */
@@ -53,6 +55,8 @@ body {
     display: flex;
     flex-direction: column;
     padding: 20px;
+    overflow: hidden;
+    height: 100%;
 }
 
 .sidebar-header {
@@ -208,6 +212,9 @@ body {
 .contact-status {
     font-size: 0.8rem;
     color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Right Sidebar (Notes) */
@@ -217,7 +224,8 @@ body {
     display: flex;
     flex-direction: column;
     padding: 20px;
-    overflow-y: auto;
+    overflow: hidden;
+    height: 100%;
 }
 
 .note-editor {
@@ -254,6 +262,9 @@ body {
     display: flex;
     flex-direction: column;
     background: var(--chat-bg);
+    overflow: hidden;
+    height: 100%;
+    position: relative;
 }
 
 .chat-header {
@@ -637,4 +648,123 @@ body {
     .chat-header {
         padding: 15px 20px;
     }
+}
+
+/* Notification Panel */
+.notification-panel {
+    position: fixed;
+    top: 60px;
+    left: 260px;
+    /* Aligned with sidebar width */
+    width: 300px;
+    max-height: 400px;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    background: rgba(30, 41, 59, 0.95);
+}
+
+.notification-panel.hidden {
+    display: none;
+}
+
+.notification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.notification-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.notification-header button {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.notification-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.notification-item {
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.notification-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.notification-item.unread {
+    border-left: 3px solid var(--primary-color);
+}
+
+.notification-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 0.25rem;
+}
+
+.notification-body {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.notification-time {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    text-align: right;
+    opacity: 0.7;
+}
+
+.empty-notifications {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 1rem;
+    font-size: 0.9rem;
+}
+
+.notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: #ef4444;
+    color: white;
+    font-size: 0.6rem;
+    padding: 2px 5px;
+    border-radius: 10px;
+    min-width: 15px;
+    text-align: center;
+}
+
+.notification-badge.hidden {
+    display: none;
 }

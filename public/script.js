@@ -10,6 +10,7 @@ const authSwitchText = document.getElementById('auth-switch-text');
 const authSwitchBtn = document.getElementById('auth-switch-btn');
 const authError = document.getElementById('auth-error');
 const logoutBtn = document.getElementById('logout-btn');
+const testNotifyBtn = document.getElementById('test-notify-btn'); // New
 const chatInterface = document.getElementById('chat-interface');
 const sidebar = document.getElementById('sidebar');
 const contactsList = document.getElementById('contacts-list');
@@ -18,6 +19,12 @@ const currentChatName = document.getElementById('current-chat-name');
 const mobileMenuBtn = document.getElementById('mobile-menu-btn');
 const currentUserAvatar = document.getElementById('current-user-avatar');
 const currentUsernameDisplay = document.getElementById('current-username');
+const notificationBtn = document.getElementById('notification-btn');
+const notificationPanel = document.getElementById('notification-panel');
+const notificationList = document.getElementById('notification-list');
+const closeNotificationsBtn = document.getElementById('close-notifications-btn');
+const clearNotificationsBtn = document.getElementById('clear-notifications-btn');
+const notificationBadge = document.getElementById('notification-badge');
 
 // Group Modal Elements
 const createGroupBtn = document.getElementById('create-group-btn');
@@ -33,6 +40,7 @@ let currentUserId = localStorage.getItem('userId');
 let activeContactId = 'ai-agent'; // 'ai-agent', userId, or groupId
 let activeType = 'ai'; // 'ai', 'user', 'group'
 let pollingInterval;
+let notifications = JSON.parse(localStorage.getItem('notifications')) || [];
 
 // --- Auth Functions ---
 
@@ -75,13 +83,90 @@ function checkAuth() {
 
         loadContacts();
         loadGroups();
+        loadNotes(); // Added here directly
         loadChat(activeContactId, activeType);
         startPolling();
+
+        // Don't auto-request here, browsers might block it. 
+        // We rely on the user clicking "Login" or the Bell icon.
+        if (Notification.permission === 'granted') {
+            console.log("Notifications already granted");
+        }
     } else {
         authModal.classList.remove('hidden');
         chatInterface.classList.add('hidden');
         sidebar.classList.add('hidden');
         stopPolling();
+    }
+}
+
+function requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+        Notification.requestPermission();
+    }
+}
+
+function sendNotification(title, body) {
+    // Add to history
+    const notification = {
+        id: Date.now(),
+        title,
+        body,
+        timestamp: new Date().toISOString(),
+        read: false
+    };
+    notifications.unshift(notification);
+    localStorage.setItem('notifications', JSON.stringify(notifications));
+    updateNotificationBadge();
+    renderNotifications();
+
+    if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, { body, icon: '/favicon.ico' }); // Use favicon if available or default
+    }
+}
+
+function updateNotificationBadge() {
+    const unreadCount = notifications.filter(n => !n.read).length;
+    if (unreadCount > 0) {
+        notificationBadge.textContent = unreadCount;
+        notificationBadge.classList.remove('hidden');
+    } else {
+        notificationBadge.classList.add('hidden');
+    }
+}
+
+function renderNotifications() {
+    notificationList.innerHTML = '';
+
+    if (notifications.length === 0) {
+        notificationList.innerHTML = '<div class="empty-notifications">No new notifications</div>';
+        return;
+    }
+
+    notifications.forEach(note => {
+        const div = document.createElement('div');
+        div.className = `notification-item ${note.read ? '' : 'unread'}`;
+        div.innerHTML = `
+            <div class="notification-title">${note.title}</div>
+            <div class="notification-body">${note.body}</div>
+            <div class="notification-time">${new Date(note.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+        `;
+        div.addEventListener('click', () => {
+            // Mark as read
+            note.read = true;
+            localStorage.setItem('notifications', JSON.stringify(notifications));
+            updateNotificationBadge();
+            renderNotifications();
+            // Optional: Navigate to chat if we stored chat ID
+        });
+        notificationList.appendChild(div);
+    });
+}
+
+function toggleNotificationPanel() {
+    notificationPanel.classList.toggle('hidden');
+    if (!notificationPanel.classList.contains('hidden')) {
+        renderNotifications();
     }
 }
 
@@ -102,31 +187,42 @@ async function loadContacts() {
         const res = await fetch('/api/users', {
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
+
+        if (res.status === 401 || res.status === 403) {
+            return; // checkAuth/logout will handle this
+        }
+
+        if (!res.ok) throw new Error(`API Error: ${res.status}`);
+
         const users = await res.json();
 
         // Clear existing users (keep AI Agent)
         const aiAgent = contactsList.querySelector('[data-id="ai-agent"]');
         contactsList.innerHTML = '';
-        contactsList.appendChild(aiAgent);
+        if (aiAgent) contactsList.appendChild(aiAgent);
 
-        users.forEach(user => {
-            const div = document.createElement('div');
-            div.className = `contact-item ${activeContactId === user._id ? 'active' : ''}`;
-            div.dataset.id = user._id;
-            div.dataset.type = 'user';
-            div.innerHTML = `
+        if (Array.isArray(users)) {
+            users.forEach(user => {
+                const div = document.createElement('div');
+                div.className = `contact-item ${activeContactId === user._id ? 'active' : ''}`;
+                div.dataset.id = user._id;
+                div.dataset.type = 'user';
+                div.innerHTML = `
                 <div class="avatar">${user.username.charAt(0).toUpperCase()}</div>
                 <div class="contact-info">
                     <span class="contact-name">${user.username}</span>
                     <span class="contact-status">User</span>
                 </div>
             `;
-            div.addEventListener('click', () => switchChat(user._id, user.username, 'user'));
-            contactsList.appendChild(div);
-        });
+                div.addEventListener('click', () => switchChat(user._id, user.username, 'user'));
+                contactsList.appendChild(div);
+            });
+        }
 
-        // Re-attach AI Agent listener
-        aiAgent.onclick = () => switchChat('ai-agent', 'AI Assistant', 'ai');
+        // Re-attach AI Agent listener if it exists
+        if (aiAgent) {
+            aiAgent.onclick = () => switchChat('ai-agent', 'AI Assistant', 'ai');
+        }
 
     } catch (error) {
         console.error('Failed to load contacts:', error);
@@ -138,25 +234,31 @@ async function loadGroups() {
         const res = await fetch('/api/groups', {
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
+
+        if (res.status === 401 || res.status === 403) return;
+        if (!res.ok) throw new Error(`API Error: ${res.status}`);
+
         const groups = await res.json();
 
         groupsList.innerHTML = '';
 
-        groups.forEach(group => {
-            const div = document.createElement('div');
-            div.className = `contact-item ${activeContactId === group._id ? 'active' : ''}`;
-            div.dataset.id = group._id;
-            div.dataset.type = 'group';
-            div.innerHTML = `
+        if (Array.isArray(groups)) {
+            groups.forEach(group => {
+                const div = document.createElement('div');
+                div.className = `contact-item ${activeContactId === group._id ? 'active' : ''}`;
+                div.dataset.id = group._id;
+                div.dataset.type = 'group';
+                div.innerHTML = `
                 <div class="avatar group-avatar">${group.name.charAt(0).toUpperCase()}</div>
                 <div class="contact-info">
                     <span class="contact-name">${group.name}</span>
                     <span class="contact-status">${group.members.length} members</span>
                 </div>
             `;
-            div.addEventListener('click', () => switchChat(group._id, group.name, 'group'));
-            groupsList.appendChild(div);
-        });
+                div.addEventListener('click', () => switchChat(group._id, group.name, 'group'));
+                groupsList.appendChild(div);
+            });
+        }
     } catch (error) {
         console.error('Failed to load groups:', error);
     }
@@ -197,9 +299,17 @@ async function loadAiHistory() {
         const res = await fetch('/api/history', {
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
+
+        if (res.status === 401 || res.status === 403) {
+            logout();
+            return;
+        }
+
+        if (!res.ok) throw new Error(`API Error: ${res.status}`);
+
         const history = await res.json();
 
-        if (history.length === 0) {
+        if (!Array.isArray(history) || history.length === 0) {
             showWelcomeMessage();
         } else {
             history.forEach(msg => {
@@ -210,6 +320,7 @@ async function loadAiHistory() {
         }
     } catch (error) {
         console.error('Failed to load AI history:', error);
+        chatHistory.innerHTML = `<div class="welcome-message"><p>Error loading history. Please refresh.</p></div>`;
     }
 }
 
@@ -218,9 +329,17 @@ async function loadUserHistory(otherUserId) {
         const res = await fetch(`/api/messages/${otherUserId}`, {
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
+
+        if (res.status === 401 || res.status === 403) {
+            logout();
+            return;
+        }
+
+        if (!res.ok) throw new Error(`API Error: ${res.status}`);
+
         const messages = await res.json();
 
-        if (messages.length === 0) {
+        if (!Array.isArray(messages) || messages.length === 0) {
             chatHistory.innerHTML = '<div class="welcome-message"><p>No messages yet. Say hello! 👋</p></div>';
         } else {
             messages.forEach(msg => {
@@ -239,9 +358,17 @@ async function loadGroupHistory(groupId) {
         const res = await fetch(`/api/groups/${groupId}/messages`, {
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
+
+        if (res.status === 401 || res.status === 403) {
+            logout();
+            return;
+        }
+
+        if (!res.ok) throw new Error(`API Error: ${res.status}`);
+
         const messages = await res.json();
 
-        if (messages.length === 0) {
+        if (!Array.isArray(messages) || messages.length === 0) {
             chatHistory.innerHTML = '<div class="welcome-message"><p>Welcome to the group! 👋</p></div>';
         } else {
             messages.forEach(msg => {
@@ -386,6 +513,20 @@ async function refreshChat() {
 
         const currentCount = chatHistory.querySelectorAll('.message').length;
         if (messages.length !== currentCount) {
+
+            // Notify if new messages and hidden
+            if (document.hidden && messages.length > currentCount) {
+                const lastMsg = messages[messages.length - 1];
+                // Don't notify if I sent it (basic check)
+                if (lastMsg.senderId !== currentUserId) {
+                    let title = "New Message";
+                    if (activeType === 'group') title = `New Message in ${currentChatName.textContent}`;
+                    if (activeType === 'user') title = `Message from ${currentChatName.textContent}`;
+
+                    sendNotification(title, lastMsg.content);
+                }
+            }
+
             chatHistory.innerHTML = '';
             messages.forEach(msg => {
                 const isMe = msg.senderId === currentUserId;
@@ -413,6 +554,53 @@ authSwitchBtn.addEventListener('click', (e) => {
     e.preventDefault();
     toggleAuthMode();
 });
+
+notificationBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleNotificationPanel();
+});
+
+closeNotificationsBtn.addEventListener('click', toggleNotificationPanel);
+
+clearNotificationsBtn.addEventListener('click', () => {
+    notifications = [];
+    localStorage.setItem('notifications', JSON.stringify(notifications));
+    updateNotificationBadge();
+    renderNotifications();
+});
+
+// Close panel when clicking outside
+document.addEventListener('click', (e) => {
+    if (!notificationPanel.classList.contains('hidden') &&
+        !notificationPanel.contains(e.target) &&
+        !notificationBtn.contains(e.target)) {
+        notificationPanel.classList.add('hidden');
+    }
+});
+
+// Test Notification Button
+if (testNotifyBtn) {
+    testNotifyBtn.addEventListener('click', () => {
+        if (!('Notification' in window)) {
+            alert("This browser does not support desktop notifications");
+            return;
+        }
+
+        if (Notification.permission === 'granted') {
+            new Notification("Test Notification", { body: "Everything is working!", icon: '/favicon.ico' });
+        } else if (Notification.permission === 'denied') {
+            alert("Notifications are blocked. Please enable them in your browser settings (click the lock/site icon in the address bar).");
+        } else {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    new Notification("Test Notification", { body: "Thanks for enabling!", icon: '/favicon.ico' });
+                } else {
+                    console.log("Permission was dismissed or denied.");
+                }
+            });
+        }
+    });
+}
 
 logoutBtn.addEventListener('click', logout);
 
@@ -457,7 +645,11 @@ authForm.addEventListener('submit', async (e) => {
             localStorage.setItem('username', currentUsername);
             localStorage.setItem('userId', currentUserId);
 
+            // Request permission explicitly on user interaction (Login click)
+            Notification.requestPermission();
+
             checkAuth();
+            updateNotificationBadge(); // Init badge
         } else {
             toggleAuthMode();
             authError.style.color = '#10b981';
@@ -751,16 +943,7 @@ deleteCurrentNoteBtn.addEventListener('click', () => {
     }
 });
 
-// Update checkAuth to load notes
-const originalCheckAuth = checkAuth;
-checkAuth = function () {
-    originalCheckAuth(); // Call original
-    if (authToken) {
-        loadNotes();
-    }
-};
-
-// Initial Check (Redo to capture new checkAuth)
+// Initial Check
 checkAuth();
 
 // Expose deleteNote to global scope for onclick handler

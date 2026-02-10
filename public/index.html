@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Agent | Intelligent Assistant</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=3">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
 
@@ -25,6 +25,13 @@
                     <span id="current-username">Guest</span>
                     <span class="status">Online</span>
                 </div>
+                <button id="notification-btn" title="Notifications"
+                    style="background:none; border:none; color:white; cursor:pointer; margin-right: 5px; position: relative;">
+                    🔔
+                    <span id="notification-badge" class="notification-badge hidden">0</span>
+                </button>
+                <button id="test-notify-btn" title="Test Notification"
+                    style="background:none; border:none; color:white; cursor:pointer; margin-right: 5px; opacity: 0.5;">📢</button>
                 <button id="logout-btn" title="Logout">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -180,6 +187,21 @@
         </aside>
 
     </div>
+
+    <!-- Notification Panel -->
+    <div id="notification-panel" class="notification-panel hidden">
+        <div class="notification-header">
+            <h3>Notifications</h3>
+            <button id="close-notifications-btn">×</button>
+        </div>
+        <div id="notification-list" class="notification-list">
+            <!-- Notifications will be loaded here -->
+            <div class="empty-notifications">No new notifications</div>
+        </div>
+        <button id="clear-notifications-btn" class="secondary-btn" style="width:100%; margin-top:10px;">Clear
+            All</button>
+    </div>
+
     <script src="script.js"></script>
 </body>
 
