@@ -76,12 +76,27 @@ function checkAuth() {
         loadContacts();
         loadGroups();
         loadChat(activeContactId, activeType);
+        loadGroups();
+        loadChat(activeContactId, activeType);
         startPolling();
+        requestNotificationPermission();
     } else {
         authModal.classList.remove('hidden');
         chatInterface.classList.add('hidden');
         sidebar.classList.add('hidden');
         stopPolling();
+    }
+}
+
+function requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+        Notification.requestPermission();
+    }
+}
+
+function sendNotification(title, body) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, { body, icon: '/favicon.ico' }); // Use favicon if available or default
     }
 }
 
@@ -386,6 +401,20 @@ async function refreshChat() {
 
         const currentCount = chatHistory.querySelectorAll('.message').length;
         if (messages.length !== currentCount) {
+
+            // Notify if new messages and hidden
+            if (document.hidden && messages.length > currentCount) {
+                const lastMsg = messages[messages.length - 1];
+                // Don't notify if I sent it (basic check)
+                if (lastMsg.senderId !== currentUserId) {
+                    let title = "New Message";
+                    if (activeType === 'group') title = `New Message in ${currentChatName.textContent}`;
+                    if (activeType === 'user') title = `Message from ${currentChatName.textContent}`;
+
+                    sendNotification(title, lastMsg.content);
+                }
+            }
+
             chatHistory.innerHTML = '';
             messages.forEach(msg => {
                 const isMe = msg.senderId === currentUserId;
