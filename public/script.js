@@ -10,6 +10,7 @@ const authSwitchText = document.getElementById('auth-switch-text');
 const authSwitchBtn = document.getElementById('auth-switch-btn');
 const authError = document.getElementById('auth-error');
 const logoutBtn = document.getElementById('logout-btn');
+const testNotifyBtn = document.getElementById('test-notify-btn'); // New
 const chatInterface = document.getElementById('chat-interface');
 const sidebar = document.getElementById('sidebar');
 const contactsList = document.getElementById('contacts-list');
@@ -440,6 +441,21 @@ authSwitchBtn.addEventListener('click', (e) => {
     e.preventDefault();
     toggleAuthMode();
 });
+
+// Test Notification Button
+if (testNotifyBtn) {
+    testNotifyBtn.addEventListener('click', () => {
+        if ('Notification' in window) {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    new Notification("Test Notification", { body: "This is a test message!", icon: '/favicon.ico' });
+                } else {
+                    alert("Notifications are not allowed. Please enable them in your browser settings.");
+                }
+            });
+        }
+    });
+}
 
 logoutBtn.addEventListener('click', logout);
 
