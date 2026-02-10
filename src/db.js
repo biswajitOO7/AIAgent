@@ -49,18 +49,19 @@ const getConnectionError = () => {
 };
 
 
-if (!usersCollection) await connectDB();
-const existingUser = await usersCollection.findOne({ username });
-if (existingUser) {
-    throw new Error('Username already exists');
-}
-const hashedPassword = await bcrypt.hash(password, 10);
-const result = await usersCollection.insertOne({
-    username,
-    password: hashedPassword,
-    createdAt: new Date()
-});
-return result.insertedId;
+async function registerUser(username, password) {
+    if (!usersCollection) await connectDB();
+    const existingUser = await usersCollection.findOne({ username });
+    if (existingUser) {
+        throw new Error('Username already exists');
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await usersCollection.insertOne({
+        username,
+        password: hashedPassword,
+        createdAt: new Date()
+    });
+    return result.insertedId;
 }
 
 async function findUser(username) {
