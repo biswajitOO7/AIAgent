@@ -239,9 +239,16 @@ async function saveNote(userId, title, content) {
 
 async function getNotes(userId) {
     if (!notesCollection) await connectDB();
-    return await notesCollection.find({ userId: new ObjectId(userId) })
+    const notes = await notesCollection.find({ userId: new ObjectId(userId) })
         .sort({ timestamp: -1 })
-        .toArray(); // No map needed, return raw doc with title
+        .toArray();
+
+    return notes.map(note => ({
+        id: note._id.toString(),
+        title: note.title,
+        content: note.content,
+        timestamp: note.timestamp
+    }));
 }
 
 async function deleteNote(userId, noteId) {
