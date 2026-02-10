@@ -8,6 +8,7 @@ let chatsCollection;
 let messagesCollection;
 let groupsCollection;
 let groupMessagesCollection;
+let notesCollection;
 
 async function connectDB() {
     if (client) return;
@@ -21,6 +22,7 @@ async function connectDB() {
         messagesCollection = db.collection('direct_messages');
         groupsCollection = db.collection('groups');
         groupMessagesCollection = db.collection('group_messages');
+        notesCollection = db.collection('notes');
         console.log('Connected to MongoDB');
     } catch (error) {
         console.error('MongoDB connection error:', error);
@@ -158,6 +160,39 @@ async function getGroupMessages(groupId, limit = 50) {
     }));
 }
 
+// Notes Functions
+
+async function saveNote(userId, content) {
+    if (!notesCollection) await connectDB();
+    const result = await notesCollection.insertOne({
+        userId: new ObjectId(userId),
+        content,
+        timestamp: new Date()
+    });
+    return result.insertedId;
+}
+
+async function getNotes(userId) {
+    if (!notesCollection) await connectDB();
+    const notes = await notesCollection.find({ userId: new ObjectId(userId) })
+        .sort({ timestamp: -1 })
+        .toArray();
+
+    return notes.map(note => ({
+        id: note._id.toString(),
+        content: note.content,
+        timestamp: note.timestamp
+    }));
+}
+
+async function deleteNote(userId, noteId) {
+    if (!notesCollection) await connectDB();
+    await notesCollection.deleteOne({
+        _id: new ObjectId(noteId),
+        userId: new ObjectId(userId) // Ensure user owns the note
+    });
+}
+
 module.exports = {
     connectDB,
     registerUser,
@@ -170,5 +205,8 @@ module.exports = {
     createGroup,
     getUserGroups,
     saveGroupMessage,
-    getGroupMessages
+    getGroupMessages,
+    saveNote,
+    getNotes,
+    deleteNote
 };

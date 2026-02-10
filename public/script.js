@@ -26,6 +26,14 @@ const createGroupForm = document.getElementById('create-group-form');
 const cancelGroupBtn = document.getElementById('cancel-group-btn');
 const userChecklist = document.getElementById('user-checklist');
 
+// Note Elements
+const addNoteBtn = document.getElementById('add-note-btn');
+const noteModal = document.getElementById('note-modal');
+const createNoteForm = document.getElementById('create-note-form');
+const cancelNoteBtn = document.getElementById('cancel-note-btn');
+const notesList = document.getElementById('notes-list');
+const noteContentInput = document.getElementById('note-content');
+
 let isLoginMode = true;
 let authToken = localStorage.getItem('authToken');
 let currentUsername = localStorage.getItem('username');
@@ -75,6 +83,7 @@ function checkAuth() {
 
         loadContacts();
         loadGroups();
+        loadNotes(); // Load notes on login
         loadChat(activeContactId, activeType);
         startPolling();
     } else {
@@ -345,6 +354,79 @@ createGroupForm.addEventListener('submit', async (e) => {
     }
 });
 
+// --- Notes Functions ---
+
+async function loadNotes() {
+    try {
+        const res = await fetch('/api/notes', {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const notes = await res.json();
+
+        notesList.innerHTML = '';
+        notes.forEach(note => {
+            const div = document.createElement('div');
+            div.className = 'contact-item'; // Reuse class for styling
+            div.innerHTML = `
+                <div class="note-content">${note.content}</div>
+                <div class="note-meta">
+                    <span>${new Date(note.timestamp).toLocaleDateString()}</span>
+                    <button class="delete-note-btn" onclick="deleteNote('${note.id}')">🗑️</button>
+                </div>
+            `;
+            notesList.appendChild(div);
+        });
+    } catch (error) {
+        console.error('Failed to load notes:', error);
+    }
+}
+
+async function createNote() {
+    const content = noteContentInput.value.trim();
+    if (!content) return;
+
+    try {
+        const res = await fetch('/api/notes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ content })
+        });
+
+        if (res.ok) {
+            noteModal.classList.add('hidden');
+            noteContentInput.value = '';
+            loadNotes();
+        } else {
+            alert('Failed to create note');
+        }
+    } catch (error) {
+        console.error('Error creating note:', error);
+    }
+}
+
+// Global scope for onclick
+window.deleteNote = async function (noteId) {
+    if (!confirm('Are you sure you want to delete this note?')) return;
+
+    try {
+        const res = await fetch(`/api/notes/${noteId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+
+        if (res.ok) {
+            loadNotes();
+        } else {
+            alert('Failed to delete note');
+        }
+    } catch (error) {
+        console.error('Error deleting note:', error);
+    }
+};
+
 // --- Polling ---
 
 function startPolling() {
@@ -414,6 +496,19 @@ mobileMenuBtn.addEventListener('click', () => {
 });
 
 createGroupBtn.addEventListener('click', openCreateGroupModal);
+
+addNoteBtn.addEventListener('click', () => {
+    noteModal.classList.remove('hidden');
+});
+
+cancelNoteBtn.addEventListener('click', () => {
+    noteModal.classList.add('hidden');
+});
+
+createNoteForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    createNote();
+});
 
 cancelGroupBtn.addEventListener('click', () => {
     groupModal.classList.add('hidden');

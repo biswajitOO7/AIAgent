@@ -7,6 +7,7 @@
     <title>AI Agent | Intelligent Assistant</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="notes.css">
 </head>
 
 <body>
@@ -55,6 +56,14 @@
             </div>
             <div class="contacts-list" id="groups-list">
                 <!-- Groups will be loaded here -->
+            </div>
+
+            <div class="sidebar-section-header">
+                <span>My Notes</span>
+                <button id="add-note-btn" title="Add Note">+</button>
+            </div>
+            <div class="contacts-list" id="notes-list">
+                <!-- Notes will be loaded here -->
             </div>
         </aside>
 
@@ -138,6 +147,24 @@
                     <div class="modal-buttons">
                         <button type="button" id="cancel-group-btn" class="secondary-btn">Cancel</button>
                         <button type="submit" id="submit-group-btn" class="primary-btn">Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Create Note Modal -->
+        <div id="note-modal" class="auth-modal hidden">
+            <div class="auth-box">
+                <h2>New Note</h2>
+                <form id="create-note-form">
+                    <div class="form-group">
+                        <label for="note-content">Note Content</label>
+                        <textarea id="note-content" rows="4" required placeholder="Write something..."
+                            style="width: 100%; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: white; border-radius: 8px; padding: 10px; font-family: inherit;"></textarea>
+                    </div>
+                    <div class="modal-buttons">
+                        <button type="button" id="cancel-note-btn" class="secondary-btn">Cancel</button>
+                        <button type="submit" id="submit-note-btn" class="primary-btn">Save</button>
                     </div>
                 </form>
             </div>

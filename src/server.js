@@ -15,7 +15,10 @@ const {
     createGroup,
     getUserGroups,
     saveGroupMessage,
-    getGroupMessages
+    getGroupMessages,
+    saveNote,
+    getNotes,
+    deleteNote
 } = require('./db');
 const { getAgentResponse } = require('./agent');
 require('dotenv').config();
@@ -187,6 +190,41 @@ app.post('/api/groups/:groupId/messages', authenticateToken, async (req, res) =>
     }
 });
 
+
+// Note Routes
+app.get('/api/notes', authenticateToken, async (req, res) => {
+    try {
+        const notes = await getNotes(req.user.userId);
+        res.json(notes);
+    } catch (error) {
+        console.error('Get Notes Error:', error);
+        res.status(500).json([]);
+    }
+});
+
+app.post('/api/notes', authenticateToken, async (req, res) => {
+    try {
+        const { content } = req.body;
+        if (!content) return res.status(400).json({ error: 'Content required' });
+
+        const noteId = await saveNote(req.user.userId, content);
+        res.status(201).json({ success: true, noteId });
+    } catch (error) {
+        console.error('Create Note Error:', error);
+        res.status(500).json({ error: 'Failed to create note' });
+    }
+});
+
+app.delete('/api/notes/:id', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        await deleteNote(req.user.userId, id);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Delete Note Error:', error);
+        res.status(500).json({ error: 'Failed to delete note' });
+    }
+});
 
 // Start Server
 async function startServer() {
