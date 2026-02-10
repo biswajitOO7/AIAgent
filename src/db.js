@@ -70,6 +70,12 @@ async function saveInteraction(userId, userInput, agentResponse) {
 
 async function getRecentHistory(userId, limit = 10) {
     if (!chatsCollection) await connectDB();
+    // Double check connection
+    if (!chatsCollection) {
+        console.error("Attempted to fetch history but chatsCollection is null. DB Connection Error:", connectionError);
+        throw new Error("Database Disconnected");
+    }
+
     const history = await chatsCollection.find({ userId: new ObjectId(userId) })
         .sort({ timestamp: -1 })
         .limit(limit)
@@ -163,8 +169,38 @@ async function getGroupMessages(groupId, limit = 50) {
     }));
 }
 
+// Safe collection access helper
+function getCollection(name) {
+    if (!db) {
+        throw new Error('Database not connected');
+    }
+    return db.collection(name);
+}
+
+const getConnectionError = () => {
+    return connectionError;
+};
+
+async function getRecentHistory(userId, limit = 10) {
+    if (!chatsCollection) await connectDB();
+    if (!chatsCollection) throw new Error("Database not initialized");
+
+    const history = await chatsCollection.find({ userId: new ObjectId(userId) })
+        .sort({ timestamp: -1 })
+        .limit(limit)
+        .toArray();
+
+    return history.reverse().map(doc => ({
+        input: doc.userInput,
+        output: doc.agentResponse
+    }));
+}
+
+// ... (Updating other functions similarly to be safe would be good, but let's focus on history first to be surgical)
+
 module.exports = {
     connectDB,
+    getConnectionError, // Export this!
     registerUser,
     findUser,
     getAllUsers,

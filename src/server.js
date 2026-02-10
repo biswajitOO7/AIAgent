@@ -15,7 +15,8 @@ const {
     createGroup,
     getUserGroups,
     saveGroupMessage,
-    getGroupMessages
+    getGroupMessages,
+    getConnectionError // Import
 } = require('./db');
 const { getAgentResponse } = require('./agent');
 require('dotenv').config();
@@ -42,6 +43,20 @@ function authenticateToken(req, res, next) {
         next();
     });
 }
+
+// Health Check
+app.get('/api/health', async (req, res) => {
+    try {
+        await connectDB();
+        const err = getConnectionError();
+        if (err) {
+            return res.status(503).json({ status: 'error', dbError: err });
+        }
+        res.json({ status: 'ok', message: 'Database connected' });
+    } catch (e) {
+        res.status(500).json({ status: 'error', error: e.message });
+    }
+});
 
 // Routes
 app.post('/api/auth/register', async (req, res) => {
