@@ -572,8 +572,10 @@ async function sendToGroup(groupId, content) {
 const notesList = document.getElementById('notes-list');
 const addNoteBtn = document.getElementById('add-note-btn');
 const noteModal = document.getElementById('note-modal');
+const noteModalTitle = document.getElementById('note-modal-title');
 const createNoteForm = document.getElementById('create-note-form');
 const noteContentInput = document.getElementById('note-content');
+const noteIdInput = document.getElementById('note-id');
 const cancelNoteBtn = document.getElementById('cancel-note-btn');
 
 async function loadNotes() {
@@ -589,6 +591,7 @@ async function loadNotes() {
             const div = document.createElement('div');
             div.className = 'contact-item note-item';
             div.dataset.id = note.id;
+
             // Truncate long content for preview
             const preview = note.content.length > 30 ? note.content.substring(0, 30) + '...' : note.content;
 
@@ -599,10 +602,11 @@ async function loadNotes() {
                 </div>
                 <button class="delete-note-btn" onclick="deleteNote('${note.id}', event)">×</button>
             `;
-            // Clicking a note could open it full detail? For now just list.
+
+            // Click to Edit/View
             div.onclick = (e) => {
                 if (e.target.classList.contains('delete-note-btn')) return;
-                alert(note.content); // Simple view for now
+                openNoteModal(note);
             };
             notesList.appendChild(div);
         });
@@ -611,13 +615,39 @@ async function loadNotes() {
     }
 }
 
-async function createNote() {
+function openNoteModal(note = null) {
+    if (note) {
+        // Edit Mode
+        noteModalTitle.textContent = "Edit Note";
+        noteIdInput.value = note.id;
+        noteContentInput.value = note.content;
+    } else {
+        // Create Mode
+        noteModalTitle.textContent = "Create New Note";
+        noteIdInput.value = "";
+        noteContentInput.value = "";
+    }
+    noteModal.classList.remove('hidden');
+    noteContentInput.focus();
+}
+
+async function saveNoteHandler() {
     const content = noteContentInput.value.trim();
+    const noteId = noteIdInput.value;
+
     if (!content) return;
 
     try {
-        const res = await fetch('/api/notes', {
-            method: 'POST',
+        let url = '/api/notes';
+        let method = 'POST';
+
+        if (noteId) {
+            url = `/api/notes/${noteId}`;
+            method = 'PUT';
+        }
+
+        const res = await fetch(url, {
+            method: method,
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
@@ -627,13 +657,12 @@ async function createNote() {
 
         if (res.ok) {
             noteModal.classList.add('hidden');
-            noteContentInput.value = '';
             loadNotes();
         } else {
             alert('Failed to save note');
         }
     } catch (error) {
-        console.error('Error creating note:', error);
+        console.error('Error saving note:', error);
     }
 }
 
@@ -660,7 +689,7 @@ async function deleteNote(noteId, event) {
 // --- Notes Event Listeners ---
 
 addNoteBtn.addEventListener('click', () => {
-    noteModal.classList.remove('hidden');
+    openNoteModal(null);
 });
 
 cancelNoteBtn.addEventListener('click', () => {
@@ -669,7 +698,7 @@ cancelNoteBtn.addEventListener('click', () => {
 
 createNoteForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    createNote();
+    saveNoteHandler();
 });
 
 // Update checkAuth to load notes
