@@ -231,9 +231,9 @@ app.post('/api/groups/:groupId/messages', authenticateToken, async (req, res) =>
 // Notes Routes
 app.post('/api/notes', authenticateToken, async (req, res) => {
     try {
-        const { content } = req.body;
+        const { title, content } = req.body;
         if (!content) return res.status(400).json({ error: 'Content required' });
-        const noteId = await saveNote(req.user.userId, content);
+        const noteId = await saveNote(req.user.userId, title, content);
         res.status(201).json({ noteId });
     } catch (error) {
         res.status(500).json({ error: 'Failed to save note' });
@@ -260,10 +260,10 @@ app.delete('/api/notes/:id', authenticateToken, async (req, res) => {
 
 app.put('/api/notes/:id', authenticateToken, async (req, res) => {
     try {
-        const { content } = req.body;
+        const { title, content } = req.body;
         if (!content) return res.status(400).json({ error: 'Content required' });
 
-        await updateNote(req.user.userId, req.params.id, content);
+        await updateNote(req.user.userId, req.params.id, title, content);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: 'Failed to update note' });

@@ -226,12 +226,11 @@ async function claimOrphanedChats(userId) {
 
 // Notes Functions
 
-async function saveNote(userId, content) {
+async function saveNote(userId, title, content) {
     if (!notesCollection) await connectDB();
-    if (!notesCollection) throw new Error("Database not initialized");
-
     const result = await notesCollection.insertOne({
         userId: new ObjectId(userId),
+        title: title || "Untitled Note",
         content,
         timestamp: new Date()
     });
@@ -240,17 +239,9 @@ async function saveNote(userId, content) {
 
 async function getNotes(userId) {
     if (!notesCollection) await connectDB();
-    if (!notesCollection) return [];
-
-    const notes = await notesCollection.find({ userId: new ObjectId(userId) })
+    return await notesCollection.find({ userId: new ObjectId(userId) })
         .sort({ timestamp: -1 })
-        .toArray();
-
-    return notes.map(note => ({
-        id: note._id.toString(),
-        content: note.content,
-        timestamp: note.timestamp
-    }));
+        .toArray(); // No map needed, return raw doc with title
 }
 
 async function deleteNote(userId, noteId) {
@@ -263,13 +254,13 @@ async function deleteNote(userId, noteId) {
     });
 }
 
-async function updateNote(userId, noteId, content) {
+async function updateNote(userId, noteId, title, content) {
     if (!notesCollection) await connectDB();
     if (!notesCollection) throw new Error("Database not initialized");
 
     const result = await notesCollection.updateOne(
         { _id: new ObjectId(noteId), userId: new ObjectId(userId) },
-        { $set: { content: content, updatedAt: new Date() } }
+        { $set: { title: title || "Untitled Note", content: content, updatedAt: new Date() } }
     );
     return result.modifiedCount;
 }
