@@ -317,6 +317,14 @@ body {
     font-weight: 500;
 }
 
+.message-time {
+    display: block;
+    font-size: 0.65rem;
+    margin-top: 4px;
+    opacity: 0.6;
+    text-align: right;
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;

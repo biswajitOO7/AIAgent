@@ -203,8 +203,8 @@ async function loadAiHistory() {
             showWelcomeMessage();
         } else {
             history.forEach(msg => {
-                appendMessage(msg.input, 'user');
-                appendMessage(msg.output, 'ai');
+                appendMessage(msg.input, 'user', null, msg.timestamp);
+                appendMessage(msg.output, 'ai', null, msg.timestamp);
             });
             scrollToBottom();
         }
@@ -225,7 +225,7 @@ async function loadUserHistory(otherUserId) {
         } else {
             messages.forEach(msg => {
                 const isMe = msg.senderId === currentUserId;
-                appendMessage(msg.content, isMe ? 'user' : 'ai');
+                appendMessage(msg.content, isMe ? 'user' : 'ai', null, msg.timestamp);
             });
             scrollToBottom();
         }
@@ -246,7 +246,7 @@ async function loadGroupHistory(groupId) {
         } else {
             messages.forEach(msg => {
                 const isMe = msg.senderId === currentUserId;
-                appendMessage(msg.content, isMe ? 'user' : 'ai', isMe ? null : msg.senderName);
+                appendMessage(msg.content, isMe ? 'user' : 'ai', isMe ? null : msg.senderName, msg.timestamp);
             });
             scrollToBottom();
         }
@@ -255,7 +255,7 @@ async function loadGroupHistory(groupId) {
     }
 }
 
-function appendMessage(text, type, senderName = null) {
+function appendMessage(text, type, senderName = null, timestamp = null) {
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${type}`;
 
@@ -268,6 +268,13 @@ function appendMessage(text, type, senderName = null) {
 
     const textNode = document.createTextNode(text);
     msgDiv.appendChild(textNode);
+
+    // Timestamp
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'message-time';
+    const date = timestamp ? new Date(timestamp) : new Date();
+    timeSpan.textContent = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    msgDiv.appendChild(timeSpan);
 
     chatHistory.appendChild(msgDiv);
     scrollToBottom();
@@ -388,9 +395,9 @@ async function refreshChat() {
                 // Let's duplicate the render logic slightly to be safe.
 
                 if (activeType === 'group') {
-                    appendMessage(msg.content, isMe ? 'user' : 'ai', isMe ? null : msg.senderName);
+                    appendMessage(msg.content, isMe ? 'user' : 'ai', isMe ? null : msg.senderName, msg.timestamp);
                 } else {
-                    appendMessage(msg.content, isMe ? 'user' : 'ai');
+                    appendMessage(msg.content, isMe ? 'user' : 'ai', null, msg.timestamp);
                 }
             });
             scrollToBottom();

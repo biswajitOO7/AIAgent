@@ -194,7 +194,8 @@ async function getRecentHistory(userId, limit = 10) {
 
     return history.reverse().map(doc => ({
         input: doc.userInput,
-        output: doc.agentResponse
+        output: doc.agentResponse,
+        timestamp: doc.timestamp
     }));
 }
 
