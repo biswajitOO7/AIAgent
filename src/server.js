@@ -19,9 +19,10 @@ const {
     getConnectionError,
     getDebugStats,
     claimOrphanedChats,
-    saveNote,      // Import
-    getNotes,      // Import
-    deleteNote     // Import
+    saveNote,
+    getNotes,
+    deleteNote,
+    updateNote // Import
 } = require('./db');
 const { getAgentResponse } = require('./agent');
 require('dotenv').config();
@@ -254,6 +255,18 @@ app.delete('/api/notes/:id', authenticateToken, async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete note' });
+    }
+});
+
+app.put('/api/notes/:id', authenticateToken, async (req, res) => {
+    try {
+        const { content } = req.body;
+        if (!content) return res.status(400).json({ error: 'Content required' });
+
+        await updateNote(req.user.userId, req.params.id, content);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to update note' });
     }
 });
 

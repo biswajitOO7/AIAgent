@@ -263,6 +263,17 @@ async function deleteNote(userId, noteId) {
     });
 }
 
+async function updateNote(userId, noteId, content) {
+    if (!notesCollection) await connectDB();
+    if (!notesCollection) throw new Error("Database not initialized");
+
+    const result = await notesCollection.updateOne(
+        { _id: new ObjectId(noteId), userId: new ObjectId(userId) },
+        { $set: { content: content, updatedAt: new Date() } }
+    );
+    return result.modifiedCount;
+}
+
 module.exports = {
     connectDB,
     getConnectionError,
@@ -279,7 +290,8 @@ module.exports = {
     getUserGroups,
     saveGroupMessage,
     getGroupMessages,
-    saveNote,   // Export
-    getNotes,   // Export
-    deleteNote  // Export
+    saveNote,
+    getNotes,
+    deleteNote,
+    updateNote // Export
 };
