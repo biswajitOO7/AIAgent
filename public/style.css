@@ -31,13 +31,16 @@ body {
 
 .app-container {
     width: 100%;
-    max-width: 1200px;
+    max-width: 1400px;
+    /* Wider for 3 columns */
     height: 95vh;
     background: var(--chat-bg);
     border-radius: 20px;
     border: 1px solid var(--border-color);
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    display: flex;
+    display: grid;
+    grid-template-columns: 280px 1fr 300px;
+    /* Sidebar, Chat, Notes */
     overflow: hidden;
     margin: 20px;
 }
@@ -205,6 +208,44 @@ body {
 .contact-status {
     font-size: 0.8rem;
     color: var(--text-secondary);
+}
+
+/* Right Sidebar (Notes) */
+.right-sidebar {
+    background: var(--sidebar-bg);
+    border-left: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.note-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    height: 100%;
+}
+
+.note-editor input,
+.note-editor textarea {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    font-family: inherit;
+    resize: none;
+}
+
+.note-editor textarea {
+    flex: 1;
+    line-height: 1.6;
+}
+
+.note-editor-actions {
+    display: flex;
+    gap: 10px;
 }
 
 /* Chat Interface */

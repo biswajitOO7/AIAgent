@@ -568,16 +568,21 @@ async function sendToGroup(groupId, content) {
 }
 
 // --- Notes Functions ---
+const rightSidebar = document.getElementById('right-sidebar');
+const notesListView = document.getElementById('notes-list-view');
+const noteEditorView = document.getElementById('note-editor-view');
 
 const notesList = document.getElementById('notes-list');
 const addNoteBtn = document.getElementById('add-note-btn');
-const noteModal = document.getElementById('note-modal');
-const noteModalTitle = document.getElementById('note-modal-title');
-const createNoteForm = document.getElementById('create-note-form');
+
+// Editor Elements
+const editorTitle = document.getElementById('editor-title');
+const closeEditorBtn = document.getElementById('close-editor-btn');
 const noteTitleInput = document.getElementById('note-title');
 const noteContentInput = document.getElementById('note-content');
 const noteIdInput = document.getElementById('note-id');
-const cancelNoteBtn = document.getElementById('cancel-note-btn');
+const saveNoteBtn = document.getElementById('save-note-btn');
+const deleteCurrentNoteBtn = document.getElementById('delete-current-note-btn');
 
 async function loadNotes() {
     try {
@@ -607,7 +612,7 @@ async function loadNotes() {
             // Click to Edit/View
             div.onclick = (e) => {
                 if (e.target.classList.contains('delete-note-btn')) return;
-                openNoteModal(note);
+                openNoteEditor(note);
             };
             notesList.appendChild(div);
         });
@@ -616,27 +621,46 @@ async function loadNotes() {
     }
 }
 
-function openNoteModal(note = null) {
+function openNoteEditor(note = null) {
+    // Show Editor, Hide List
+    notesListView.classList.add('hidden');
+    noteEditorView.classList.remove('hidden');
+    addNoteBtn.classList.add('hidden'); // Hide add button when editing
+
     if (note) {
         // Edit Mode
-        noteModalTitle.textContent = "Edit Note";
+        editorTitle.textContent = "Edit Note";
         noteIdInput.value = note.id;
         noteTitleInput.value = note.title || "";
         noteContentInput.value = note.content;
+        deleteCurrentNoteBtn.classList.remove('hidden');
     } else {
         // Create Mode
-        noteModalTitle.textContent = "Create New Note";
+        editorTitle.textContent = "New Note";
         noteIdInput.value = "";
         noteTitleInput.value = "";
         noteContentInput.value = "";
+        deleteCurrentNoteBtn.classList.add('hidden'); // Can't delete unsaved note
     }
-    noteModal.classList.remove('hidden');
+
     // Focus title if empty, otherwise content
     if (!noteTitleInput.value) {
         noteTitleInput.focus();
     } else {
         noteContentInput.focus();
     }
+}
+
+function closeNoteEditor() {
+    // Show List, Hide Editor
+    noteEditorView.classList.add('hidden');
+    notesListView.classList.remove('hidden');
+    addNoteBtn.classList.remove('hidden');
+
+    // Clear inputs
+    noteIdInput.value = "";
+    noteTitleInput.value = "";
+    noteContentInput.value = "";
 }
 
 async function saveNoteHandler() {
@@ -666,13 +690,15 @@ async function saveNoteHandler() {
         });
 
         if (res.ok) {
-            noteModal.classList.add('hidden');
-            loadNotes();
+            closeNoteEditor(); // Go back to list
+            loadNotes(); // Refresh list
         } else {
-            alert('Failed to save note');
+            const errorData = await res.json();
+            alert(`Failed to save note: ${errorData.error || res.statusText} (${res.status})`);
         }
     } catch (error) {
         console.error('Error saving note:', error);
+        alert(`Error saving note: ${error.message}`);
     }
 }
 
@@ -699,16 +725,23 @@ async function deleteNote(noteId, event) {
 // --- Notes Event Listeners ---
 
 addNoteBtn.addEventListener('click', () => {
-    openNoteModal(null);
+    openNoteEditor(null);
 });
 
-cancelNoteBtn.addEventListener('click', () => {
-    noteModal.classList.add('hidden');
+closeEditorBtn.addEventListener('click', () => {
+    closeNoteEditor();
 });
 
-createNoteForm.addEventListener('submit', (e) => {
-    e.preventDefault();
+saveNoteBtn.addEventListener('click', () => {
     saveNoteHandler();
+});
+
+deleteCurrentNoteBtn.addEventListener('click', () => {
+    const noteId = noteIdInput.value;
+    if (noteId) {
+        deleteNote(noteId); // Helper to delete and close
+        closeNoteEditor();
+    }
 });
 
 // Update checkAuth to load notes
