@@ -70,16 +70,32 @@ async function saveInteraction(userId, userInput, agentResponse) {
 }
 
 async function getRecentHistory(userId, limit = 10) {
-    if (!chatsCollection) await connectDB();
-    const history = await chatsCollection.find({ userId: new ObjectId(userId) })
-        .sort({ timestamp: -1 })
-        .limit(limit)
-        .toArray();
+    console.log(`getRecentHistory called for ${userId}`);
+    if (!chatsCollection) {
+        console.log("chatsCollection missing, calling connectDB...");
+        await connectDB();
+    }
+    if (!chatsCollection) {
+        console.error("CRITICAL: chatsCollection still missing after connectDB");
+        throw new Error("Database not connected");
+    }
 
-    return history.reverse().map(doc => ({
-        input: doc.userInput,
-        output: doc.agentResponse
-    }));
+    try {
+        const history = await chatsCollection.find({ userId: new ObjectId(userId) })
+            .sort({ timestamp: -1 })
+            .limit(limit)
+            .toArray();
+
+        console.log(`Found ${history.length} chat history items.`);
+
+        return history.reverse().map(doc => ({
+            input: doc.userInput,
+            output: doc.agentResponse
+        }));
+    } catch (err) {
+        console.error("Error in getRecentHistory:", err);
+        throw err;
+    }
 }
 
 async function saveDirectMessage(senderId, recipientId, content) {
@@ -190,16 +206,29 @@ async function saveNote(userId, content) {
 }
 
 async function getNotes(userId) {
+    console.log(`getNotes called for ${userId}`);
     if (!notesCollection) await connectDB();
-    const notes = await notesCollection.find({ userId: new ObjectId(userId) })
-        .sort({ timestamp: -1 })
-        .toArray();
 
-    return notes.map(note => ({
-        id: note._id.toString(),
-        content: note.content,
-        timestamp: note.timestamp
-    }));
+    if (!notesCollection) {
+        console.error("notesCollection missing!");
+        return [];
+    }
+
+    try {
+        const notes = await notesCollection.find({ userId: new ObjectId(userId) })
+            .sort({ timestamp: -1 })
+            .toArray();
+        console.log(`Found ${notes.length} notes.`);
+
+        return notes.map(note => ({
+            id: note._id.toString(),
+            content: note.content,
+            timestamp: note.timestamp
+        }));
+    } catch (e) {
+        console.error("Error in getNotes:", e);
+        throw e;
+    }
 }
 
 async function deleteNote(userId, noteId) {
