@@ -208,6 +208,9 @@ body {
 .contact-status {
     font-size: 0.8rem;
     color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Right Sidebar (Notes) */

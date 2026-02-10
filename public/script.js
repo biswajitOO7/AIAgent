@@ -76,8 +76,6 @@ function checkAuth() {
         loadContacts();
         loadGroups();
         loadChat(activeContactId, activeType);
-        loadGroups();
-        loadChat(activeContactId, activeType);
         startPolling();
         requestNotificationPermission();
     } else {
