@@ -163,13 +163,26 @@ async function getGroupMessages(groupId, limit = 50) {
 // Notes Functions
 
 async function saveNote(userId, content) {
-    if (!notesCollection) await connectDB();
-    const result = await notesCollection.insertOne({
-        userId: new ObjectId(userId),
-        content,
-        timestamp: new Date()
-    });
-    return result.insertedId;
+    if (!notesCollection) {
+        await connectDB();
+        // Double check if collection is initialized after connectDB
+        if (!notesCollection) {
+            console.error("Failed to initialize notesCollection");
+            throw new Error("Database not initialized");
+        }
+    }
+
+    try {
+        const result = await notesCollection.insertOne({
+            userId: new ObjectId(userId),
+            content,
+            timestamp: new Date()
+        });
+        return result.insertedId;
+    } catch (error) {
+        console.error("Error saving note to DB:", error);
+        throw error;
+    }
 }
 
 async function getNotes(userId) {
